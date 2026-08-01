@@ -1,0 +1,6 @@
+{
+  "name": "Ahmadify Commerce Platform",
+  "description": "Enterprise eCommerce storefront for ahmadify.store with Amazon-style catalog, Admin Dashboard, CJdropshipping integration, AI product generator & order management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
