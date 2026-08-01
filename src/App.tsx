@@ -13,6 +13,7 @@ import { ContactPage } from './components/ContactPage';
 import { InvoiceView } from './components/InvoiceView';
 import { Footer } from './components/Footer';
 import { SEOHead } from './components/SEOHead';
+import { AIBusinessOperatingSystem } from './components/AIBusinessOperatingSystem';
 
 import {
   INITIAL_COMPANY_INFO,
@@ -44,6 +45,19 @@ import {
   ProductReview
 } from './types';
 import { Sparkles, SlidersHorizontal, Tag, RefreshCw } from 'lucide-react';
+import {
+  subscribeProducts,
+  subscribeOrders,
+  subscribeCoupons,
+  subscribeStoreSettings,
+  saveProductToFirestore,
+  deleteProductFromFirestore,
+  saveOrderToFirestore,
+  saveCouponToFirestore,
+  deleteCouponFromFirestore,
+  saveReviewToFirestore,
+  saveSettingsToFirestore
+} from './lib/firebaseService';
 
 export default function App() {
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(INITIAL_COMPANY_INFO);
@@ -81,60 +95,58 @@ export default function App() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isTrackOrderOpen, setIsTrackOrderOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isAiBosOpen, setIsAiBosOpen] = useState(false);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
   const [activePolicyKey, setActivePolicyKey] = useState('about');
   const [viewingInvoiceOrder, setViewingInvoiceOrder] = useState<Order | null>(null);
 
-  // Sync state with server backend API on mount
+  // Sync state with server backend API & Firebase Firestore
   useEffect(() => {
-    fetch('/api/settings')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.companyInfo) {
-          setCompanyInfo(data.companyInfo);
-          if (data.businessHours) setBusinessHours(data.businessHours);
-          if (data.socialLinks) setSocialLinks(data.socialLinks);
-          if (data.mapLocation) setMapLocation(data.mapLocation);
-        } else if (data.name) {
-          setCompanyInfo(data);
-        }
-      })
-      .catch((err) => console.log('Using default local settings'));
+    // 1. Firebase Realtime Subscriptions
+    const unsubProducts = subscribeProducts((data) => {
+      if (data && data.length > 0) setProducts(data);
+    });
+    const unsubOrders = subscribeOrders((data) => {
+      if (data && data.length > 0) setOrders(data);
+    });
+    const unsubCoupons = subscribeCoupons((data) => {
+      if (data && data.length > 0) setCoupons(data);
+    });
+    const unsubSettings = subscribeStoreSettings((data) => {
+      if (data?.companyInfo) setCompanyInfo(data.companyInfo);
+      if (data?.businessHours) setBusinessHours(data.businessHours);
+      if (data?.socialLinks) setSocialLinks(data.socialLinks);
+      if (data?.mapLocation) setMapLocation(data.mapLocation);
+    });
 
-    fetch('/api/products')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) setProducts(data);
-      })
-      .catch((err) => console.log('Using default local products'));
-
-    fetch('/api/orders')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) setOrders(data);
-      })
-      .catch((err) => console.log('Using default local orders'));
-
+    // 2. Fetch supplementary APIs
     fetch('/api/policies')
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) setPolicies(data);
       })
-      .catch((err) => console.log('Using default local policies'));
+      .catch(() => console.log('Using default local policies'));
 
     fetch('/api/seo')
       .then((res) => res.json())
       .then((data) => {
         if (data.defaultTitle) setSeoSettings(data);
       })
-      .catch((err) => console.log('Using default local SEO settings'));
+      .catch(() => console.log('Using default local SEO settings'));
 
     fetch('/api/analytics')
       .then((res) => res.json())
       .then((data) => {
         if (data.googleAnalyticsId) setAnalyticsSettings(data);
       })
-      .catch((err) => console.log('Using default local analytics settings'));
+      .catch(() => console.log('Using default local analytics settings'));
+
+    return () => {
+      unsubProducts();
+      unsubOrders();
+      unsubCoupons();
+      unsubSettings();
+    };
   }, []);
 
   // Cart Operations
@@ -295,14 +307,23 @@ export default function App() {
 
   const handleAddCoupon = (newCoupon: Coupon) => {
     setCoupons(prev => [newCoupon, ...prev]);
+    saveCouponToFirestore(newCoupon);
   };
 
   const handleDeleteCoupon = (code: string) => {
+    deleteCouponFromFirestore(code);
     setCoupons(prev => prev.filter(c => c.code !== code));
   };
 
   const handleToggleCoupon = (code: string) => {
-    setCoupons(prev => prev.map(c => c.code === code ? { ...c, active: !c.active } : c));
+    setCoupons(prev => prev.map(c => {
+      if (c.code === code) {
+        const updated = { ...c, active: !c.active };
+        saveCouponToFirestore(updated);
+        return updated;
+      }
+      return c;
+    }));
   };
 
   // Order Placement Handler
@@ -321,20 +342,17 @@ export default function App() {
       notes: appliedCoupon ? `Coupon applied: ${appliedCoupon}` : undefined,
     };
 
+    let createdOrder: Order;
+
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newOrderPayload),
       });
-      const createdOrder: Order = await response.json();
-      setOrders((prev) => [createdOrder, ...prev]);
-      setCart([]);
-      setAppliedCoupon(null);
-      setDiscountAmount(0);
-      return createdOrder;
+      createdOrder = await response.json();
     } catch (err) {
-      const fallbackOrder: Order = {
+      createdOrder = {
         id: 'AHM-' + Math.floor(100000 + Math.random() * 900000),
         orderNumber: 'AHM-' + Math.floor(100000 + Math.random() * 900000),
         createdAt: new Date().toISOString(),
@@ -364,12 +382,15 @@ export default function App() {
         carrier: 'Royal Mail 24 Tracked',
         cjSyncStatus: 'synced',
       };
-      setOrders((prev) => [fallbackOrder, ...prev]);
-      setCart([]);
-      setAppliedCoupon(null);
-      setDiscountAmount(0);
-      return fallbackOrder;
     }
+
+    setOrders((prev) => [createdOrder, ...prev]);
+    saveOrderToFirestore(createdOrder);
+
+    setCart([]);
+    setAppliedCoupon(null);
+    setDiscountAmount(0);
+    return createdOrder;
   };
 
   // Filter & Sort Products
@@ -631,6 +652,7 @@ export default function App() {
         onToggleCoupon={handleToggleCoupon}
         onUpdateCompanyInfo={(info) => {
           setCompanyInfo(info);
+          saveSettingsToFirestore({ companyInfo: info });
           fetch('/api/settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -664,46 +686,48 @@ export default function App() {
           });
         }}
         onAddProduct={(newP) => {
+          const created: Product = {
+            ...newP,
+            id: 'prod-' + Date.now(),
+            createdAt: new Date().toISOString(),
+          };
+          setProducts((prev) => [created, ...prev]);
+          saveProductToFirestore(created);
           fetch('/api/products', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newP),
-          })
-            .then((res) => res.json())
-            .then((created) => setProducts((prev) => [created, ...prev]))
-            .catch(() => {
-              const localCreated: Product = {
-                ...newP,
-                id: 'prod-' + Date.now(),
-                createdAt: new Date().toISOString(),
-              };
-              setProducts((prev) => [localCreated, ...prev]);
-            });
+          }).catch(() => {});
         }}
         onUpdateProduct={(upP) => {
           setProducts((prev) => prev.map((p) => (p.id === upP.id ? upP : p)));
+          saveProductToFirestore(upP);
           fetch(`/api/products/${upP.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(upP),
-          });
+          }).catch(() => {});
         }}
         onDeleteProduct={(id) => {
           setProducts((prev) => prev.filter((p) => p.id !== id));
-          fetch(`/api/products/${id}`, { method: 'DELETE' });
+          deleteProductFromFirestore(id);
+          fetch(`/api/products/${id}`, { method: 'DELETE' }).catch(() => {});
         }}
         onUpdateOrderStatus={(id, status, tracking, carrier) => {
           setOrders((prev) =>
-            prev.map((o) =>
-              o.id === id
-                ? {
-                    ...o,
-                    orderStatus: status,
-                    trackingNumber: tracking || o.trackingNumber,
-                    carrier: carrier || o.carrier,
-                  }
-                : o
-            )
+            prev.map((o) => {
+              if (o.id === id) {
+                const updated = {
+                  ...o,
+                  orderStatus: status,
+                  trackingNumber: tracking || o.trackingNumber,
+                  carrier: carrier || o.carrier,
+                };
+                saveOrderToFirestore(updated);
+                return updated;
+              }
+              return o;
+            })
           );
         }}
         onViewInvoice={(order) => {
@@ -727,6 +751,41 @@ export default function App() {
         companyInfo={companyInfo}
         onClose={() => setViewingInvoiceOrder(null)}
       />
+
+      {/* Floating AI BOS Assistant Trigger Button */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          type="button"
+          onClick={() => setIsAiBosOpen(true)}
+          className="px-4 py-3 bg-slate-950 text-amber-400 hover:bg-slate-900 border border-amber-500/50 rounded-2xl shadow-2xl transition-all flex items-center gap-2.5 font-extrabold text-xs group hover:scale-105"
+        >
+          <div className="p-1.5 bg-amber-500 text-slate-950 rounded-xl group-hover:rotate-12 transition-transform">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <span>AI Business OS</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+        </button>
+      </div>
+
+      {/* Standalone AI BOS Modal */}
+      {isAiBosOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md overflow-y-auto font-sans">
+          <div className="w-full max-w-7xl max-h-[92vh] overflow-y-auto">
+            <AIBusinessOperatingSystem
+              products={products}
+              onUpdateProducts={(prods) => setProducts(prods)}
+              orders={orders}
+              companyInfo={companyInfo}
+              onUpdateCompanyInfo={(info) => setCompanyInfo(info)}
+              coupons={coupons}
+              onAddCoupon={(c) => setCoupons((prev) => [c, ...prev])}
+              seoSettings={seoSettings}
+              onUpdateSEO={(s) => setSeoSettings(s)}
+              onClose={() => setIsAiBosOpen(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Site Footer */}
       <Footer

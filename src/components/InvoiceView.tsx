@@ -1,4 +1,5 @@
 import React from 'react';
+import { LogoImage } from './LogoImage';
 import { Printer, X, ShieldCheck, Download, ArrowLeft } from 'lucide-react';
 import { Order, CompanyInfo } from '../types';
 
@@ -56,19 +57,8 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({ order, companyInfo, on
           <div className="flex flex-col sm:flex-row justify-between items-start gap-6 border-b border-slate-200 pb-6">
             <div>
               <div className="flex items-center gap-2.5 mb-1">
-                <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-200 p-0.5 shadow-sm overflow-hidden flex items-center justify-center shrink-0">
-                  {!logoFailed ? (
-                    <img
-                      src={logoSrc}
-                      alt="ahmadify.store logo"
-                      className="w-full h-full object-contain"
-                      onError={handleLogoError}
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center font-black text-slate-950 text-sm rounded-lg shadow-inner">
-                      A
-                    </div>
-                  )}
+                <div className="h-10 px-1 rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center shrink-0">
+                  <LogoImage customSrc={companyInfo.logo} alt={`${companyInfo.name} logo`} className="h-9 w-auto max-w-[120px] object-contain" />
                 </div>
                 <div>
                   <span className="font-extrabold text-2xl tracking-wider text-slate-950 block leading-none">

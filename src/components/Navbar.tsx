@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { FirebaseAuthButton } from './FirebaseAuthButton';
+import { LogoImage } from './LogoImage';
 import {
   Search,
   ShoppingBag,
@@ -126,19 +128,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => onSelectCategory('All')}
             className="cursor-pointer flex items-center gap-2.5 group"
           >
-            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700/80 p-0.5 shadow-lg group-hover:scale-105 transition-transform overflow-hidden flex items-center justify-center shrink-0">
-              {!logoFailed ? (
-                <img
-                  src={logoSrc}
-                  alt="ahmadify.store logo"
-                  className="w-full h-full object-contain"
-                  onError={handleLogoError}
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center font-black text-slate-950 text-sm rounded-lg shadow-inner">
-                  A
-                </div>
-              )}
+            <div className="h-10 px-1 rounded-xl bg-white border border-slate-200 shadow-md group-hover:scale-105 transition-transform overflow-hidden flex items-center justify-center shrink-0">
+              <LogoImage customSrc={companyInfo.logo} alt={`${companyInfo.name} logo`} className="h-9 w-auto max-w-[120px] object-contain" />
             </div>
             <div>
               <div className="font-extrabold text-xl tracking-wider text-white flex items-center gap-1.5">
@@ -270,6 +261,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               {cartCount}
             </span>
           </button>
+
+          {/* Firebase Auth */}
+          <FirebaseAuthButton />
 
           {/* Admin Switcher */}
           <button

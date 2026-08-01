@@ -2,6 +2,7 @@ import { Product, Category, Order, CJProduct, CJSyncLog, Coupon, User, AuditLog,
 
 export const INITIAL_COMPANY_INFO: CompanyInfo = {
   name: "ahmadify.store",
+  logo: "/logo.png",
   type: "Official E-Commerce Storefront",
   domain: "https://www.ahmadify.store",
   email: "ahmadify.ltd@gmail.com",

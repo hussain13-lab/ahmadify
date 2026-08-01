@@ -3,6 +3,7 @@ export type LanguageCode = 'en' | 'es' | 'fr' | 'de' | 'ar' | 'ur';
 
 export interface CompanyInfo {
   name: string;
+  logo?: string;
   type: string;
   domain: string;
   email: string;
@@ -124,6 +125,17 @@ export interface Product {
   videos?: string[];
   stock: number;
   sku: string;
+  supplierId?: SupplierId;
+  supplierName?: string;
+  supplierProductId?: string;
+  supplierSku?: string;
+  warehouse?: string;
+  costPrice?: number;
+  shippingCost?: number;
+  estimatedDeliveryDays?: string;
+  countryOfOrigin?: string;
+  supplierRating?: number;
+  suppliersList?: SupplierSource[];
   cjProductId?: string;
   cjVariantId?: string;
   profitMarginPercent?: number;
@@ -158,6 +170,7 @@ export interface CartItem {
   quantity: number;
   selectedColor?: string;
   selectedSize?: string;
+  supplierId?: SupplierId;
 }
 
 export interface Address {
@@ -179,7 +192,6 @@ export type OrderStatus =
   | 'refunded';
 
 export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
-export type PaymentMethod = 'stripe' | 'paypal' | 'cod';
 
 export interface Order {
   id: string;
@@ -202,6 +214,10 @@ export interface Order {
   carrier?: string;
   estimatedDelivery?: string;
   cjSyncStatus?: 'synced' | 'pending' | 'failed' | 'not_applicable';
+  supplierFulfillmentStatus?: 'pending' | 'sent_to_supplier' | 'confirmed' | 'shipped' | 'delivered' | 'failed';
+  supplierId?: SupplierId;
+  supplierOrderId?: string;
+  trackingProvider?: TrackingProvider;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -240,7 +256,130 @@ export interface Coupon {
   active: boolean;
 }
 
-export type UserRole = 'super_admin' | 'admin' | 'manager' | 'staff' | 'customer';
+export type UserRole = 'super_admin' | 'admin' | 'manager' | 'inventory_manager' | 'marketing' | 'customer_support' | 'staff' | 'customer';
+
+export type PaymentMethod = 'stripe' | 'paypal' | 'google_pay' | 'apple_pay' | 'klarna' | 'wise' | 'bank_transfer' | 'cod';
+
+export type SupplierId =
+  | 'cj_dropshipping'
+  | 'aliexpress'
+  | 'zendrop'
+  | 'spocket'
+  | 'syncee'
+  | 'autods'
+  | 'dsers'
+  | 'modalyst'
+  | 'printful'
+  | 'printify';
+
+export interface SupplierConfig {
+  id: SupplierId;
+  name: string;
+  logo: string;
+  description: string;
+  status: 'connected' | 'disconnected' | 'standby' | 'error';
+  apiKey?: string;
+  apiSecret?: string;
+  email?: string;
+  warehouse?: string;
+  currency?: CurrencyCode;
+  language?: LanguageCode;
+  shippingCountry?: string;
+  lastConnectedAt?: string;
+  rateLimitPerMin?: number;
+  activeProductsCount?: number;
+  avgShippingDays?: string;
+  rating?: number;
+}
+
+export interface SupplierSource {
+  supplierId: SupplierId;
+  supplierName: string;
+  supplierProductId: string;
+  supplierSku: string;
+  warehouse: string;
+  costPrice: number;
+  shippingCost: number;
+  estimatedDeliveryDays: string;
+  countryOfOrigin: string;
+  rating: number;
+  inventory: number;
+  isPrimary?: boolean;
+}
+
+export interface PricingRule {
+  id: string;
+  name: string;
+  supplierId: SupplierId | 'all';
+  category: string | 'all';
+  brand: string | 'all';
+  markupType: 'percentage' | 'fixed' | 'hybrid';
+  percentageValue: number;
+  fixedValue: number;
+  roundingMode: 'none' | 'round_99' | 'round_95';
+  minProfitMargin: number;
+  maxProfitMargin?: number;
+  includeShippingInMarkup: boolean;
+  includeVatInMarkup: boolean;
+  currencyConversionMultiplier: number;
+  automaticDiscountPercent: number;
+  active: boolean;
+}
+
+export interface ImportSettingsOptions {
+  importTitle: boolean;
+  importDescription: boolean;
+  importSpecifications: boolean;
+  importImages: boolean;
+  importVideos: boolean;
+  importVariants: boolean;
+  importAttributes: boolean;
+  importWeight: boolean;
+  importDimensions: boolean;
+  importSupplierSku: boolean;
+  importReviews: boolean;
+  importSupplierPrice: boolean;
+  targetWarehouse: string;
+  targetBrand?: string;
+  targetCategory?: string;
+  targetTags?: string[];
+}
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  trigger: 'order_placed' | 'low_stock' | 'price_increase' | 'shipping_delay';
+  conditionValue?: string;
+  action: 'auto_fulfill' | 'auto_switch_lowest_price' | 'auto_switch_fastest_shipping' | 'auto_adjust_price' | 'notify_admin';
+  active: boolean;
+}
+
+export interface ImportJob {
+  id: string;
+  supplierId: SupplierId;
+  supplierName: string;
+  query: string;
+  importType: 'keyword' | 'url' | 'sku' | 'category' | 'brand' | 'collection' | 'trending' | 'bestseller' | 'new_arrival' | 'discounted';
+  totalFound: number;
+  importedCount: number;
+  failedCount: number;
+  status: 'running' | 'completed' | 'failed' | 'partial';
+  createdAt: string;
+  errorLog?: string[];
+}
+
+export type TrackingProvider = 'cj_tracking' | 'seventeen_track' | 'aftership' | 'parcel_panel';
+
+export interface SupplierAnalyticsMetric {
+  supplierId: SupplierId;
+  supplierName: string;
+  totalOrders: number;
+  onTimeDeliveryRate: number; // percentage
+  avgShippingDays: number;
+  defectReturnRate: number; // percentage
+  avgProfitMargin: number; // percentage
+  costEfficiencyScore: number; // 0-100
+}
 
 export interface User {
   id: string;
@@ -274,3 +413,224 @@ export interface BlogPost {
   readTime: string;
   tags: string[];
 }
+
+export type PageId =
+  | 'home'
+  | 'header_footer'
+  | 'navigation_menu'
+  | 'mega_menu'
+  | 'hero_section'
+  | 'featured_categories'
+  | 'featured_products'
+  | 'trending'
+  | 'bestsellers'
+  | 'flash_sales'
+  | 'collections'
+  | 'about_us'
+  | 'contact'
+  | 'faq'
+  | 'policies'
+  | 'blogs'
+  | 'announcement_bar'
+  | 'popup_banner'
+  | 'landing_page'
+  | 'page_404'
+  | 'product_detail'
+  | 'checkout'
+  | 'thank_you'
+  | 'customer_dashboard';
+
+export type BlockType =
+  | 'hero'
+  | 'heading'
+  | 'paragraph'
+  | 'image'
+  | 'video'
+  | 'button'
+  | 'product_grid'
+  | 'category_carousel'
+  | 'countdown_timer'
+  | 'testimonial'
+  | 'faq_accordion'
+  | 'trust_badges'
+  | 'newsletter_signup'
+  | 'custom_html'
+  | 'contact_form'
+  | 'columns';
+
+export interface PageBlock {
+  id: string;
+  type: BlockType;
+  title: string;
+  content: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  ctaText?: string;
+  ctaLink?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  visible: boolean;
+  order: number;
+  customCss?: string;
+  customJs?: string;
+  settings?: Record<string, any>;
+}
+
+export interface WebsitePageConfig {
+  id: PageId;
+  title: string;
+  slug: string;
+  isPublished: boolean;
+  metaTitle: string;
+  metaDescription: string;
+  blocks: PageBlock[];
+  updatedAt: string;
+}
+
+export interface GlobalThemeConfig {
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColorLight: string;
+  backgroundColorDark: string;
+  fontFamilyHeading: string;
+  fontFamilyBody: string;
+  buttonStyle: 'rounded-full' | 'rounded-xl' | 'rounded-md' | 'square';
+  borderRadius: number; // in px
+  layoutWidth: 'contained' | 'fluid' | 'narrow';
+  enableDarkMode: boolean;
+  logoUrl: string;
+  faviconUrl: string;
+  announcementText: string;
+  announcementLink: string;
+  showAnnouncement: boolean;
+  whatsappNumber: string;
+  supportPhone: string;
+  supportEmail: string;
+  addressText: string;
+}
+
+export interface MediaAsset {
+  id: string;
+  name: string;
+  url: string;
+  type: 'image' | 'video' | 'pdf' | 'document' | 'icon';
+  sizeBytes: number;
+  folder: string;
+  dimensions?: string;
+  createdAt: string;
+}
+
+export interface EmailTemplateConfig {
+  id: 'order_confirmation' | 'shipping_update' | 'refund' | 'password_reset' | 'newsletter' | 'abandoned_cart' | 'welcome';
+  name: string;
+  subject: string;
+  previewText: string;
+  bodyHtml: string;
+  active: boolean;
+}
+
+export interface SEOCenterConfig {
+  siteTitle: string;
+  siteDescription: string;
+  keywords: string[];
+  ogImage: string;
+  twitterHandle: string;
+  canonicalUrl: string;
+  robotsTxt: string;
+  enableSitemap: boolean;
+  structuredDataJsonLd: string;
+}
+
+export interface SiteBackupPoint {
+  id: string;
+  timestamp: string;
+  creator: string;
+  sizeMb: number;
+  description: string;
+  dataJson: string;
+}
+
+// =========================================================================
+// AHMADIFY AI BUSINESS OPERATING SYSTEM (AI BOS) TYPES
+// =========================================================================
+
+export type AIAgentType =
+  | 'ceo'
+  | 'marketing'
+  | 'seo'
+  | 'product_manager'
+  | 'inventory_manager'
+  | 'supplier_manager'
+  | 'finance'
+  | 'support'
+  | 'designer'
+  | 'writer'
+  | 'ads'
+  | 'developer'
+  | 'security'
+  | 'analyst';
+
+export type AIExecutionMode =
+  | 'suggestion'
+  | 'preview'
+  | 'approval'
+  | 'automatic'
+  | 'simulation'
+  | 'rollback';
+
+export interface AIToolCall {
+  id: string;
+  toolName: string;
+  description: string;
+  parameters: Record<string, any>;
+  status: 'pending' | 'executing' | 'approved' | 'rejected' | 'completed' | 'failed' | 'rolled_back';
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  affectedEntities: string[];
+  backupCreated: boolean;
+  timestamp: string;
+  result?: any;
+  rollbackData?: any;
+}
+
+export interface AIBOSActionLog {
+  id: string;
+  prompt: string;
+  agent: AIAgentType;
+  mode: AIExecutionMode;
+  timestamp: string;
+  summary: string;
+  toolCalls: AIToolCall[];
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  status: 'completed' | 'pending_approval' | 'rejected' | 'rolled_back';
+  estimatedTime: string;
+  responseMessage?: string;
+  affectedPages?: string[];
+  affectedProductsCount?: number;
+}
+
+export interface AIBOSPlugin {
+  id: string;
+  name: string;
+  category: 'payment' | 'dropshipping' | 'analytics' | 'marketing' | 'crm' | 'shipping' | 'ai' | 'automation';
+  description: string;
+  iconName: string;
+  installed: boolean;
+  version: string;
+  author: string;
+  official: boolean;
+  settings?: Record<string, any>;
+}
+
+export interface AIAuditIssue {
+  id: string;
+  type: 'broken_link' | 'missing_image' | 'seo_error' | 'security_alert' | 'low_profit' | 'inventory_warning' | 'supplier_sync' | 'failed_payment' | 'accessibility';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  description: string;
+  affectedItem?: string;
+  suggestedTool: string;
+  toolParams: Record<string, any>;
+  resolved: boolean;
+}
+

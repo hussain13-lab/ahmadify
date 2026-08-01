@@ -43,9 +43,27 @@ import {
   Key,
   Share2,
   Wrench,
-  ArrowRight
+  ArrowRight,
+  Layout
 } from 'lucide-react';
 import { EmailTemplatePreviewModal } from './EmailTemplatePreviewModal';
+import { SupplyChainDashboard } from './SupplyChainDashboard';
+import { WebsiteBuilderStudio } from './WebsiteBuilderStudio';
+import { AIBusinessOperatingSystem } from './AIBusinessOperatingSystem';
+import { LogoImage } from './LogoImage';
+import {
+  INITIAL_SUPPLIERS,
+  INITIAL_PRICING_RULES,
+  INITIAL_AUTOMATION_RULES
+} from '../data/supplyChainData';
+import {
+  DEFAULT_THEME_CONFIG,
+  INITIAL_WEBSITE_PAGES,
+  INITIAL_MEDIA_ASSETS,
+  INITIAL_EMAIL_TEMPLATES,
+  INITIAL_SEO_CONFIG,
+  INITIAL_BACKUPS
+} from '../data/websiteBuilderData';
 import {
   ResponsiveContainer,
   LineChart,
@@ -74,7 +92,8 @@ import {
   Coupon,
   User as UserType,
   ProductVariant,
-  ProductSpecification
+  ProductSpecification,
+  SiteBackupPoint
 } from '../types';
 
 interface AdminDashboardProps {
@@ -143,9 +162,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [adminPasscode, setAdminPasscode] = useState<string>('ahmadify2026');
 
   // Active Tab state
-  const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'orders' | 'customers' | 'coupons' | 'cj' | 'settings' | 'logs'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'orders' | 'customers' | 'coupons' | 'cj' | 'website_builder' | 'settings' | 'logs' | 'ai_bos'>('ai_bos');
   const [userRole, setUserRole] = useState<UserRole>('super_admin');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Website Owner Control & Builder State
+  const [themeConfig, setThemeConfig] = useState(DEFAULT_THEME_CONFIG);
+  const [websitePages, setWebsitePages] = useState(INITIAL_WEBSITE_PAGES);
+  const [mediaAssets, setMediaAssets] = useState(INITIAL_MEDIA_ASSETS);
+  const [emailTemplatesList, setEmailTemplatesList] = useState(INITIAL_EMAIL_TEMPLATES);
+  const [seoConfigState, setSeoConfigState] = useState(INITIAL_SEO_CONFIG);
+  const [backupsList, setBackupsList] = useState(INITIAL_BACKUPS);
+
+  // Supply Chain State
+  const [suppliersList, setSuppliersList] = useState(INITIAL_SUPPLIERS);
+  const [pricingRulesList, setPricingRulesList] = useState(INITIAL_PRICING_RULES);
+  const [automationRulesList, setAutomationRulesList] = useState(INITIAL_AUTOMATION_RULES);
 
   // Email Notification Modal state
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -196,9 +228,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [varPrice, setVarPrice] = useState<number>(49.99);
   const [varStock, setVarStock] = useState<number>(20);
 
-  // Product Filter State
+  // Product Filter & Sorting State
   const [productSearch, setProductSearch] = useState('');
   const [productStockFilter, setProductStockFilter] = useState<'all' | 'in_stock' | 'low_stock' | 'out_of_stock'>('all');
+  const [productSortField, setProductSortField] = useState<'title' | 'price' | 'costPrice' | 'profit' | 'profitMargin' | 'stock' | 'updatedAt'>('title');
+  const [productSortAsc, setProductSortAsc] = useState<boolean>(true);
 
   // Customer Search & Modal State
   const [customerSearch, setCustomerSearch] = useState('');
@@ -623,8 +657,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* Header */}
           <div className="text-center space-y-3">
-            <div className="w-16 h-16 rounded-2xl bg-slate-950 border border-slate-700/80 p-2 mx-auto shadow-xl flex items-center justify-center">
-              <img src="/logo.png" alt="ahmadify.store logo" className="w-full h-full object-contain" />
+            <div className="w-16 h-16 rounded-2xl bg-white border border-slate-700/80 p-2 mx-auto shadow-xl flex items-center justify-center overflow-hidden">
+              <LogoImage customSrc={companyInfo.logo} alt="ahmadify.store logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <h2 className="text-xl font-extrabold text-white flex items-center justify-center gap-2">
@@ -716,8 +750,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {/* Side Panel Header / Brand Emblem */}
         <div className="p-4 border-b border-slate-800/80 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-700/80 p-0.5 shadow-lg overflow-hidden flex items-center justify-center shrink-0">
-              <img src="/logo.png" alt="ahmadify.store logo" className="w-full h-full object-contain" />
+            <div className="w-9 h-9 rounded-xl bg-white border border-slate-700/80 p-0.5 shadow-lg overflow-hidden flex items-center justify-center shrink-0">
+              <LogoImage customSrc={companyInfo.logo} alt="ahmadify.store logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="font-extrabold text-sm text-white flex items-center gap-1.5">
@@ -744,6 +778,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               Main Workspace
             </div>
             <div className="space-y-1">
+              <button
+                onClick={() => { setActiveTab('ai_bos'); setMobileSidebarOpen(false); }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all ${
+                  activeTab === 'ai_bos'
+                    ? 'bg-amber-500 text-slate-950 font-extrabold shadow-lg shadow-amber-500/20'
+                    : 'bg-slate-900 text-amber-400 border border-amber-500/30 font-extrabold hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="w-4 h-4 animate-pulse" />
+                  <span>AI Business OS</span>
+                </div>
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 font-extrabold px-1.5 py-0.5 rounded border border-amber-500/40">
+                  AI BOS
+                </span>
+              </button>
+
               <button
                 onClick={() => { setActiveTab('analytics'); setMobileSidebarOpen(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all ${
@@ -836,12 +887,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
 
-          {/* Group 2: Automation & Supply Chain */}
+          {/* Group 2: Design & Supply Chain */}
           <div>
             <div className="px-3 text-[10px] uppercase tracking-wider font-extrabold text-slate-500 mb-2">
-              Supply Chain & Apps
+              Website Builder & Supply Chain
             </div>
             <div className="space-y-1">
+              <button
+                onClick={() => { setActiveTab('website_builder'); setMobileSidebarOpen(false); }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all ${
+                  activeTab === 'website_builder'
+                    ? 'bg-amber-500 text-slate-950 font-extrabold shadow-lg shadow-amber-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Layout className="w-4 h-4" />
+                  <span>Website Builder & Owner Studio</span>
+                </div>
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 font-extrabold px-1.5 py-0.5 rounded border border-amber-500/30">
+                  No-Code
+                </span>
+              </button>
+
               <button
                 onClick={() => { setActiveTab('cj'); setMobileSidebarOpen(false); }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all ${
@@ -947,12 +1015,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </button>
             <div>
               <h1 className="text-base font-extrabold text-white capitalize flex items-center gap-2">
+                {activeTab === 'ai_bos' && 'Ahmadify AI Business Operating System (AI BOS)'}
                 {activeTab === 'analytics' && 'Overview & Store Analytics'}
                 {activeTab === 'products' && 'Product Catalog & Inventory'}
                 {activeTab === 'orders' && 'Customer Orders & Dispatch Fulfillment'}
                 {activeTab === 'customers' && 'Customer Relationship Management (CRM)'}
                 {activeTab === 'coupons' && 'Coupons & Promotional Discounts'}
                 {activeTab === 'cj' && 'CJdropshipping & Multi-Supplier Hub'}
+                {activeTab === 'website_builder' && 'Website Builder & Owner Studio'}
                 {activeTab === 'settings' && 'Store Configuration, Payments & Custom Domain'}
                 {activeTab === 'logs' && 'Security Audit & Activity History'}
               </h1>
@@ -993,6 +1063,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         {/* Dashboard Content Container */}
         <div className="p-6 overflow-y-auto flex-1 space-y-6">
+          {/* TAB 0: AI Business Operating System (AI BOS) */}
+          {activeTab === 'ai_bos' && (
+            <AIBusinessOperatingSystem
+              products={products}
+              onUpdateProducts={(prods) => {
+                if (onUpdateProduct && prods.length > 0) {
+                  prods.forEach((p) => onUpdateProduct(p));
+                }
+              }}
+              orders={orders}
+              companyInfo={companyInfo}
+              onUpdateCompanyInfo={onUpdateCompanyInfo}
+              coupons={coupons}
+              onAddCoupon={(c) => onAddCoupon && onAddCoupon(c)}
+              seoSettings={seoSettings || {
+                defaultTitle: companyInfo.name,
+                titleTemplate: '%s | ' + companyInfo.name,
+                defaultDescription: '',
+                defaultKeywords: [],
+                ogImage: '',
+                canonicalBase: '',
+                twitterHandle: '',
+                homepageTitle: '',
+                homepageDescription: '',
+                blogTitleTemplate: ''
+              }}
+              onUpdateSEO={(s) => onUpdateSeoSettings && onUpdateSeoSettings(s)}
+              isEmbeddedInAdmin={true}
+            />
+          )}
+
           {/* TAB 1: Analytics Overview */}
           {activeTab === 'analytics' && (
             <div className="space-y-6">
@@ -1128,110 +1229,198 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               {/* Products Table */}
               <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl overflow-hidden shadow-xl">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-slate-950/80 text-slate-400 font-bold uppercase text-[10px] border-b border-slate-700">
-                    <tr>
-                      <th className="p-3.5">Product & SKU</th>
-                      <th className="p-3.5">Category</th>
-                      <th className="p-3.5">Price</th>
-                      <th className="p-3.5">Stock Level & Quick Edit</th>
-                      <th className="p-3.5">Variants</th>
-                      <th className="p-3.5 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-700/60">
-                    {filteredProductsList.map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-800/60 transition-colors">
-                        <td className="p-3.5">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={p.images?.[0] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=200&q=80'}
-                              alt={p.title}
-                              className="w-10 h-10 object-cover rounded-lg border border-slate-700 shrink-0 bg-slate-900"
-                            />
-                            <div>
-                              <div className="font-extrabold text-white text-xs">{p.title}</div>
-                              <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
-                                <span>SKU: {p.sku}</span>
-                                {p.cjProductId && (
-                                  <span className="text-amber-400 font-bold bg-amber-500/10 px-1 rounded border border-amber-500/20">
-                                    CJ Dropshipped
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3.5 font-medium text-slate-300">{p.category}</td>
-                        <td className="p-3.5 font-bold text-white">
-                          £{p.price.toFixed(2)}
-                          {p.originalPrice && (
-                            <span className="text-[10px] text-slate-500 line-through block font-normal">
-                              £{p.originalPrice.toFixed(2)}
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-3.5">
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              p.stock === 0 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
-                              p.stock <= 10 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                              'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                            }`}>
-                              {p.stock === 0 ? 'Out of Stock' : `${p.stock} in stock`}
-                            </span>
-
-                            {/* Quick Stock Controls */}
-                            <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg px-1 py-0.5">
-                              <button
-                                onClick={() => onUpdateProduct({ ...p, stock: Math.max(0, p.stock - 1) })}
-                                className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white font-bold bg-slate-800 rounded"
-                                title="Decrease Stock"
-                              >
-                                -
-                              </button>
-                              <span className="text-[11px] font-bold px-1 text-amber-400">{p.stock}</span>
-                              <button
-                                onClick={() => onUpdateProduct({ ...p, stock: p.stock + 1 })}
-                                className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white font-bold bg-slate-800 rounded"
-                                title="Increase Stock"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3.5 text-slate-400">
-                          {p.variants && p.variants.length > 0 ? (
-                            <span className="text-sky-400 font-bold bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20 text-[10px]">
-                              {p.variants.length} Options
-                            </span>
-                          ) : (
-                            <span className="text-slate-500 text-[10px]">Standard</span>
-                          )}
-                        </td>
-                        <td className="p-3.5 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => openProductModal(p)}
-                              className="p-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-                              title="Edit Product Details"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => onDeleteProduct(p.id)}
-                              className="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg transition-colors"
-                              title="Delete Product"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300 whitespace-nowrap">
+                    <thead className="bg-slate-950/90 text-slate-400 font-bold uppercase text-[10px] border-b border-slate-700">
+                      <tr>
+                        <th className="p-3.5 sticky left-0 bg-slate-950 border-r border-slate-800">Product Image & SKU</th>
+                        <th className="p-3.5">Supplier</th>
+                        <th
+                          className="p-3.5 cursor-pointer hover:text-white"
+                          onClick={() => {
+                            setProductSortField('costPrice');
+                            setProductSortAsc(!productSortAsc);
+                          }}
+                        >
+                          Supplier Cost (£) {productSortField === 'costPrice' ? (productSortAsc ? '↑' : '↓') : ''}
+                        </th>
+                        <th className="p-3.5">Suggested MSRP (£)</th>
+                        <th className="p-3.5">Shipping (£)</th>
+                        <th
+                          className="p-3.5 cursor-pointer hover:text-white"
+                          onClick={() => {
+                            setProductSortField('price');
+                            setProductSortAsc(!productSortAsc);
+                          }}
+                        >
+                          My Selling Price (£) {productSortField === 'price' ? (productSortAsc ? '↑' : '↓') : ''}
+                        </th>
+                        <th
+                          className="p-3.5 cursor-pointer hover:text-emerald-400"
+                          onClick={() => {
+                            setProductSortField('profit');
+                            setProductSortAsc(!productSortAsc);
+                          }}
+                        >
+                          Profit (£) {productSortField === 'profit' ? (productSortAsc ? '↑' : '↓') : ''}
+                        </th>
+                        <th
+                          className="p-3.5 cursor-pointer hover:text-amber-400"
+                          onClick={() => {
+                            setProductSortField('profitMargin');
+                            setProductSortAsc(!productSortAsc);
+                          }}
+                        >
+                          Margin (%) {productSortField === 'profitMargin' ? (productSortAsc ? '↑' : '↓') : ''}
+                        </th>
+                        <th
+                          className="p-3.5 cursor-pointer hover:text-white"
+                          onClick={() => {
+                            setProductSortField('stock');
+                            setProductSortAsc(!productSortAsc);
+                          }}
+                        >
+                          Stock Level {productSortField === 'stock' ? (productSortAsc ? '↑' : '↓') : ''}
+                        </th>
+                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5">Sync Status</th>
+                        <th className="p-3.5">Last Updated</th>
+                        <th className="p-3.5 text-right sticky right-0 bg-slate-950 border-l border-slate-800">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/60 font-mono text-[11px]">
+                      {filteredProductsList
+                        .slice()
+                        .sort((a, b) => {
+                          const costA = a.costPrice || (a.price * 0.45);
+                          const costB = b.costPrice || (b.price * 0.45);
+                          const profitA = a.price - costA;
+                          const profitB = b.price - costB;
+                          const marginA = (profitA / a.price) * 100;
+                          const marginB = (profitB / b.price) * 100;
+
+                          let valA: any = a[productSortField as keyof Product] ?? 0;
+                          let valB: any = b[productSortField as keyof Product] ?? 0;
+
+                          if (productSortField === 'costPrice') { valA = costA; valB = costB; }
+                          if (productSortField === 'profit') { valA = profitA; valB = profitB; }
+                          if (productSortField === 'profitMargin') { valA = marginA; valB = marginB; }
+
+                          if (valA < valB) return productSortAsc ? -1 : 1;
+                          if (valA > valB) return productSortAsc ? 1 : -1;
+                          return 0;
+                        })
+                        .map((p) => {
+                          const costPrice = p.costPrice || Number((p.price * 0.45).toFixed(2));
+                          const msrp = Number((p.originalPrice || p.price * 1.35).toFixed(2));
+                          const shippingCost = Number((p.shippingCost || 3.99).toFixed(2));
+                          const profit = Number((p.price - costPrice).toFixed(2));
+                          const margin = Number(((profit / p.price) * 100).toFixed(1));
+
+                          return (
+                            <tr key={p.id} className="hover:bg-slate-800/60 transition-colors font-sans">
+                              <td className="p-3.5 sticky left-0 bg-slate-900 border-r border-slate-800">
+                                <div className="flex items-center gap-3">
+                                  <img
+                                    src={p.images?.[0] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=200&q=80'}
+                                    alt={p.title}
+                                    className="w-10 h-10 object-cover rounded-lg border border-slate-700 shrink-0 bg-slate-900"
+                                  />
+                                  <div className="min-w-0 max-w-[200px]">
+                                    <div className="font-extrabold text-white text-xs truncate">{p.title}</div>
+                                    <div className="text-[10px] text-slate-400 font-mono">SKU: {p.sku}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-3.5">
+                                <span className="text-amber-400 font-bold text-xs">
+                                  {p.supplierName || (p.cjProductId ? 'CJ Dropshipping' : 'Ahmadify Select')}
+                                </span>
+                              </td>
+                              <td className="p-3.5 font-mono text-slate-300">
+                                £{costPrice.toFixed(2)}
+                              </td>
+                              <td className="p-3.5 font-mono text-emerald-400 font-bold">
+                                £{msrp.toFixed(2)}
+                              </td>
+                              <td className="p-3.5 font-mono text-slate-400">
+                                £{shippingCost.toFixed(2)}
+                              </td>
+                              <td className="p-3.5 font-mono text-amber-300 font-extrabold bg-amber-500/10 text-xs">
+                                £{p.price.toFixed(2)}
+                              </td>
+                              <td className="p-3.5 font-mono text-emerald-400 font-extrabold">
+                                +£{profit.toFixed(2)}
+                              </td>
+                              <td className="p-3.5 font-mono">
+                                <span className="px-2 py-0.5 rounded font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px]">
+                                  {margin}%
+                                </span>
+                              </td>
+                              <td className="p-3.5 font-mono">
+                                <div className="flex items-center gap-2">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    p.stock === 0 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                                    p.stock <= 10 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                    'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                  }`}>
+                                    {p.stock === 0 ? 'Out of Stock' : `${p.stock}`}
+                                  </span>
+                                  <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg px-1 py-0.5">
+                                    <button
+                                      onClick={() => onUpdateProduct({ ...p, stock: Math.max(0, p.stock - 1) })}
+                                      className="w-4 h-4 flex items-center justify-center text-slate-400 hover:text-white font-bold bg-slate-800 rounded"
+                                    >
+                                      -
+                                    </button>
+                                    <span className="text-[10px] font-bold px-1 text-amber-400">{p.stock}</span>
+                                    <button
+                                      onClick={() => onUpdateProduct({ ...p, stock: p.stock + 1 })}
+                                      className="w-4 h-4 flex items-center justify-center text-slate-400 hover:text-white font-bold bg-slate-800 rounded"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-3.5">
+                                <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">
+                                  Published
+                                </span>
+                              </td>
+                              <td className="p-3.5">
+                                <span className="px-2 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/20 font-bold text-[10px] flex items-center gap-1">
+                                  <ShieldCheck className="w-3 h-3 text-amber-400" />
+                                  Locked by Owner
+                                </span>
+                              </td>
+                              <td className="p-3.5 text-[10px] text-slate-400 font-mono">
+                                2026-08-01
+                              </td>
+                              <td className="p-3.5 text-right sticky right-0 bg-slate-900 border-l border-slate-800">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={() => openProductModal(p)}
+                                    className="p-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-lg transition-colors border border-amber-500/30"
+                                    title="Edit Product Details & Selling Price"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => onDeleteProduct(p.id)}
+                                    className="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg transition-colors border border-rose-500/30"
+                                    title="Delete Product"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -1474,144 +1663,93 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           )}
 
-          {/* TAB 6: Dropshipping Suppliers & Multi-App Integrations */}
+          {/* TAB 6: Website Owner Control Studio & Drag-and-Drop Page Builder */}
+          {activeTab === 'website_builder' && (
+            <WebsiteBuilderStudio
+              themeConfig={themeConfig}
+              onUpdateThemeConfig={setThemeConfig}
+              pages={websitePages}
+              onUpdatePages={setWebsitePages}
+              mediaAssets={mediaAssets}
+              onAddMediaAsset={(asset) => setMediaAssets((prev) => [asset, ...prev])}
+              emailTemplates={emailTemplatesList}
+              onUpdateEmailTemplates={setEmailTemplatesList}
+              seoConfig={seoConfigState}
+              onUpdateSEOConfig={setSeoConfigState}
+              backups={backupsList}
+              onCreateBackup={(description) => {
+                const newBackup: SiteBackupPoint = {
+                  id: 'bak-' + Date.now(),
+                  timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                  creator: 'Super Admin (Owner)',
+                  sizeMb: 1.48,
+                  description,
+                  dataJson: JSON.stringify({ websitePages, themeConfig, seoConfigState })
+                };
+                setBackupsList((prev) => [newBackup, ...prev]);
+              }}
+              onRestoreBackup={(backupId) => {
+                const bak = backupsList.find((b) => b.id === backupId);
+                if (bak && bak.dataJson) {
+                  try {
+                    const parsed = JSON.parse(bak.dataJson);
+                    if (parsed.websitePages) setWebsitePages(parsed.websitePages);
+                    if (parsed.themeConfig) setThemeConfig(parsed.themeConfig);
+                    if (parsed.seoConfigState) setSeoConfigState(parsed.seoConfigState);
+                  } catch (e) {
+                    console.error('Failed to parse backup state');
+                  }
+                }
+              }}
+            />
+          )}
+
+          {/* TAB 7: Multi-Supplier Supply Chain Platform */}
           {activeTab === 'cj' && (
-            <div className="space-y-6">
-              {/* CJ Credentials Box */}
-              <div className="p-6 bg-slate-800/80 border border-slate-700/80 rounded-2xl shadow-xl space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-700/80 pb-4">
-                  <div>
-                    <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-                      CJdropshipping Automated API Credentials
-                      <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[10px] border border-emerald-500/20">
-                        {cjStatusMessage}
-                      </span>
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Automated product import and direct order dispatch payload</p>
-                  </div>
-                  <button
-                    onClick={handleSyncCjCatalog}
-                    disabled={cjLoading}
-                    className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-md"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${cjLoading ? 'animate-spin' : ''}`} /> Sync Live Catalog
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <label className="font-bold text-slate-300 block mb-1">CJ Account Email:</label>
-                    <input
-                      type="text"
-                      value={cjEmail}
-                      onChange={(e) => setCjEmail(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-300 block mb-1">CJ API Access Token:</label>
-                    <input
-                      type="password"
-                      value={cjApiKey}
-                      onChange={(e) => setCjApiKey(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Other Dropshipping Apps Section */}
-              <div className="p-6 bg-slate-800/80 border border-slate-700/80 rounded-2xl shadow-xl space-y-4">
-                <div className="border-b border-slate-700/80 pb-3">
-                  <h3 className="text-sm font-extrabold text-white">Other Dropshipping Apps & Custom Webhooks</h3>
-                  <p className="text-xs text-slate-400">Connect DSers, Spocket, Zendrop, AliOrders, or Custom Webhooks</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                  <div className="p-3 bg-slate-900 border border-slate-700 rounded-xl space-y-2">
-                    <div className="font-bold text-amber-400">DSers / AliExpress</div>
-                    <input
-                      type="password"
-                      value={dsersKey}
-                      onChange={(e) => setDsersKey(e.target.value)}
-                      className="w-full p-2 bg-slate-950 border border-slate-800 rounded font-mono text-[11px] text-white"
-                      placeholder="DSers API Key"
-                    />
-                    <span className="text-[10px] text-emerald-400 block font-bold">Connected & Ready</span>
-                  </div>
-
-                  <div className="p-3 bg-slate-900 border border-slate-700 rounded-xl space-y-2">
-                    <div className="font-bold text-amber-400">Spocket EU & US</div>
-                    <input
-                      type="password"
-                      value={spocketKey}
-                      onChange={(e) => setSpocketKey(e.target.value)}
-                      className="w-full p-2 bg-slate-950 border border-slate-800 rounded font-mono text-[11px] text-white"
-                      placeholder="Spocket API Token"
-                    />
-                    <span className="text-[10px] text-emerald-400 block font-bold">Connected & Ready</span>
-                  </div>
-
-                  <div className="p-3 bg-slate-900 border border-slate-700 rounded-xl space-y-2">
-                    <div className="font-bold text-amber-400">Zendrop Express</div>
-                    <input
-                      type="password"
-                      value={zendropKey}
-                      onChange={(e) => setZendropKey(e.target.value)}
-                      className="w-full p-2 bg-slate-950 border border-slate-800 rounded font-mono text-[11px] text-white"
-                      placeholder="Zendrop API Token"
-                    />
-                    <span className="text-[10px] text-emerald-400 block font-bold">Connected & Ready</span>
-                  </div>
-                </div>
-
-                {/* Custom Webhook Configuration */}
-                <div className="pt-2">
-                  <label className="font-bold text-slate-300 block mb-1 text-xs">Custom Supplier Webhook Endpoint:</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={webhookUrl}
-                      onChange={(e) => setWebhookUrl(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono text-xs"
-                    />
-                    <button
-                      onClick={handleTestWebhookPing}
-                      className="px-3.5 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-xl"
-                    >
-                      Test Webhook Ping
-                    </button>
-                  </div>
-                  {webhookTestStatus && (
-                    <p className="text-xs text-emerald-400 font-bold mt-1">{webhookTestStatus}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* CJ Catalog List */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {cjCatalog.map((item) => (
-                  <div key={item.cjId} className="p-4 bg-slate-800 rounded-xl border border-slate-700 flex flex-col justify-between">
-                    <div>
-                      <img src={item.image} alt={item.name} className="w-full h-36 object-cover rounded-lg bg-slate-900 mb-3" />
-                      <div className="font-extrabold text-white text-xs mb-1">{item.name}</div>
-                      <div className="text-[10px] text-slate-400 font-mono">CJ SKU: {item.cjSku}</div>
-                      <div className="text-xs font-bold text-amber-400 mt-2">
-                        CJ Cost: ${item.priceUsd.toFixed(2)} | Suggested: ${item.suggestedRetailPriceUsd.toFixed(2)}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => handleImportCjProduct(item.cjId)}
-                      disabled={cjLoading}
-                      className="w-full mt-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <Plus className="w-4 h-4" /> Import + 40% Markup
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <SupplyChainDashboard
+              suppliers={suppliersList}
+              onUpdateSupplier={(updated) => {
+                setSuppliersList((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+              }}
+              pricingRules={pricingRulesList}
+              onSavePricingRule={(rule) => {
+                setPricingRulesList((prev) => {
+                  const idx = prev.findIndex((r) => r.id === rule.id);
+                  if (idx >= 0) {
+                    const copy = [...prev];
+                    copy[idx] = rule;
+                    return copy;
+                  }
+                  return [...prev, rule];
+                });
+              }}
+              onDeletePricingRule={(ruleId) => {
+                setPricingRulesList((prev) => prev.filter((r) => r.id !== ruleId));
+              }}
+              automationRules={automationRulesList}
+              onSaveAutomationRule={(rule) => {
+                setAutomationRulesList((prev) => {
+                  const idx = prev.findIndex((r) => r.id === rule.id);
+                  if (idx >= 0) {
+                    const copy = [...prev];
+                    copy[idx] = rule;
+                    return copy;
+                  }
+                  return [...prev, rule];
+                });
+              }}
+              products={products}
+              orders={orders}
+              onImportProducts={(imported, supplierId) => {
+                imported.forEach((p) => {
+                  onAddProduct(p as any);
+                });
+              }}
+              onFulfillOrder={(orderId, supplierId) => {
+                onUpdateOrderStatus(orderId, 'processing', `TRACK-EXPRESS-${Math.floor(100000 + Math.random() * 900000)}`, 'Ahmadify Express');
+                alert(`Order ${orderId} sent for auto-fulfillment to ${supplierId.toUpperCase()}!`);
+              }}
+            />
           )}
 
           {/* TAB 7: Store Settings, Payments & Domain */}

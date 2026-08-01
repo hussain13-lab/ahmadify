@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    // Products collection: public read, write access for managing catalog
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Orders collection: public create (for checkout), read/update for store management
+    match /orders/{orderId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
+    }
+
+    // Reviews collection: public read, public create for customers, update/delete for moderation
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
+    }
+
+    // Coupons collection: public read for code verification, write for store management
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Suppliers collection: store supply chain management
+    match /suppliers/{supplierId} {
+      allow read, write: if true;
+    }
+
+    // Pricing rules collection
+    match /pricing_rules/{ruleId} {
+      allow read, write: if true;
+    }
+
+    // Automation rules collection
+    match /automation_rules/{ruleId} {
+      allow read, write: if true;
+    }
+
+    // Import jobs collection
+    match /import_jobs/{jobId} {
+      allow read, write: if true;
+    }
+
+    // Supplier logs collection
+    match /supplier_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    // Store settings / metadata
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
+
+    // Test connection doc
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+
+    // Default catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

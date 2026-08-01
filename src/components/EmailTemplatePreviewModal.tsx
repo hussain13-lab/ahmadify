@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { LogoImage } from './LogoImage';
 import { Order, CompanyInfo } from '../types';
 import {
   generateOrderConfirmationEmail,
@@ -111,8 +112,8 @@ export const EmailTemplatePreviewModal: React.FC<EmailTemplatePreviewModalProps>
         {/* Header */}
         <div className="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700/80 p-0.5 shadow-lg overflow-hidden flex items-center justify-center shrink-0">
-              <img src="/logo.png" alt="ahmadify.store logo" className="w-full h-full object-contain" />
+            <div className="w-10 h-10 rounded-xl bg-white border border-slate-700/80 p-0.5 shadow-lg overflow-hidden flex items-center justify-center shrink-0">
+              <LogoImage customSrc={companyInfo.logo} alt="ahmadify.store logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <h2 className="text-base font-extrabold text-white flex items-center gap-2">

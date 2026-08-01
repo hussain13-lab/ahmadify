@@ -58,6 +58,16 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
 
   const formatPrice = (amount: number) => formatCurrencyPrice(amount, currency);
 
+  const reviewsList = product.reviews || [];
+  const totalReviews = reviewsList.length || product.reviewCount || 0;
+  const avgRating = product.rating || (totalReviews > 0 ? Number((reviewsList.reduce((acc, r) => acc + r.rating, 0) / totalReviews).toFixed(1)) : 5.0);
+
+  const ratingCounts = [5, 4, 3, 2, 1].map((stars) => {
+    const count = reviewsList.filter((r) => Math.round(r.rating) === stars).length;
+    const percentage = totalReviews > 0 ? Math.round((count / totalReviews) * 100) : (stars === 5 ? 100 : 0);
+    return { stars, count, percentage };
+  });
+
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewAuthor || !reviewComment) return;
@@ -366,19 +376,8 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                 </div>
               )}
 
-              {activeTab === 'reviews' && (() => {
-                const reviewsList = product.reviews || [];
-                const totalReviews = reviewsList.length || product.reviewCount || 0;
-                const avgRating = product.rating || (totalReviews > 0 ? Number((reviewsList.reduce((acc, r) => acc + r.rating, 0) / totalReviews).toFixed(1)) : 5.0);
-
-                const ratingCounts = [5, 4, 3, 2, 1].map((stars) => {
-                  const count = reviewsList.filter((r) => Math.round(r.rating) === stars).length;
-                  const percentage = totalReviews > 0 ? Math.round((count / totalReviews) * 100) : (stars === 5 ? 100 : 0);
-                  return { stars, count, percentage };
-                });
-
-                return (
-                  <div className="space-y-6">
+              {activeTab === 'reviews' && (
+                <div className="space-y-6">
                     {/* Overall Ratings Summary Header */}
                     <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                       <div className="md:col-span-4 flex flex-col items-center justify-center text-center border-b md:border-b-0 md:border-r border-slate-200 pb-4 md:pb-0 md:pr-4">
@@ -548,8 +547,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                       )}
                     </form>
                   </div>
-                );
-              })()}
+              )}
             </div>
           </div>
         </div>

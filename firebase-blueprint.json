@@ -1,0 +1,109 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Store product item with multi-supplier details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 300 },
+        "description": { "type": "string", "maxLength": 10000 },
+        "price": { "type": "number" },
+        "originalPrice": { "type": "number" },
+        "category": { "type": "string", "maxLength": 100 },
+        "images": { "type": "array" },
+        "stock": { "type": "number" },
+        "sku": { "type": "string", "maxLength": 100 },
+        "supplierId": { "type": "string", "maxLength": 100 },
+        "supplierName": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["id", "title", "price", "category"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer purchase order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "customerName": { "type": "string", "maxLength": 200 },
+        "customerEmail": { "type": "string", "maxLength": 200 },
+        "totalAmount": { "type": "number" },
+        "orderStatus": { "type": "string", "maxLength": 50 },
+        "supplierFulfillmentStatus": { "type": "string", "maxLength": 50 },
+        "trackingNumber": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["id", "customerName", "customerEmail", "totalAmount"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Connected dropshipping supplier configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 100 },
+        "name": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "maxLength": 50 },
+        "email": { "type": "string", "maxLength": 200 },
+        "apiKey": { "type": "string", "maxLength": 500 },
+        "lastConnectedAt": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["id", "name", "status"]
+    },
+    "PricingRule": {
+      "title": "PricingRule",
+      "description": "Automatic pricing rule",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 200 },
+        "markupType": { "type": "string", "maxLength": 50 },
+        "percentageValue": { "type": "number" },
+        "fixedValue": { "type": "number" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "name", "markupType", "active"]
+    },
+    "AutomationRule": {
+      "title": "AutomationRule",
+      "description": "Supply chain automation workflow rule",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 200 },
+        "trigger": { "type": "string", "maxLength": 100 },
+        "action": { "type": "string", "maxLength": 100 },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "name", "trigger", "action", "active"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Product catalog collection"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Customer orders collection"
+    },
+    "/suppliers/{supplierId}": {
+      "schema": { "$ref": "#/entities/Supplier" },
+      "description": "Connected dropshipping suppliers"
+    },
+    "/pricing_rules/{ruleId}": {
+      "schema": { "$ref": "#/entities/PricingRule" },
+      "description": "Automatic pricing rules engine"
+    },
+    "/automation_rules/{ruleId}": {
+      "schema": { "$ref": "#/entities/AutomationRule" },
+      "description": "Supply chain automation rules"
+    },
+    "/import_jobs/{jobId}": {
+      "description": "Product import history jobs"
+    },
+    "/supplier_logs/{logId}": {
+      "description": "Supply chain API activity logs"
+    }
+  }
+}

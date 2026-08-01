@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { LogoImage } from './LogoImage';
 import { ShieldCheck, Truck, PhoneCall, Mail, MapPin, Globe, Sparkles, CreditCard, CheckCircle2, ArrowRight } from 'lucide-react';
 import { CompanyInfo, SocialLinks } from '../types';
 
@@ -84,19 +85,8 @@ export const Footer: React.FC<FooterProps> = ({ companyInfo, socialLinks, onOpen
         {/* Company Info & Registered Office */}
         <div className="lg:col-span-4 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 p-0.5 shadow-lg overflow-hidden flex items-center justify-center shrink-0">
-              {!logoFailed ? (
-                <img
-                  src={logoSrc}
-                  alt="ahmadify.store logo"
-                  className="w-full h-full object-contain"
-                  onError={handleLogoError}
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center font-black text-slate-950 text-sm rounded-lg shadow-inner">
-                  A
-                </div>
-              )}
+            <div className="h-10 px-1 rounded-xl bg-white border border-slate-200 shadow-md overflow-hidden flex items-center justify-center shrink-0">
+              <LogoImage customSrc={companyInfo.logo} alt={`${companyInfo.name} logo`} className="h-9 w-auto max-w-[120px] object-contain" />
             </div>
             <div>
               <span className="font-black text-xl text-white tracking-wider block">
