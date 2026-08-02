@@ -223,6 +223,29 @@ export interface Order {
   updatedAt: string;
 }
 
+export interface CJStore {
+  storeId: string;
+  storeName: string;
+  authorizationStatus: 'Authorized' | 'Unauthorized' | 'Pending';
+  status: 'Activated' | 'Inactivated' | 'Disabled';
+  connectedAt?: string;
+  email?: string;
+  tokenExpired?: boolean;
+}
+
+export interface CJConnectionDetails {
+  connected: boolean;
+  selectedStoreId: string;
+  selectedStoreName: string;
+  stores: CJStore[];
+  authorizationStatus: string;
+  status: string;
+  lastSync: string;
+  apiConnectionStatus: string;
+  tokenExpired: boolean;
+  errorMessage?: string;
+}
+
 export interface CJProduct {
   cjId: string;
   name: string;
