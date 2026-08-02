@@ -307,6 +307,37 @@ export const CJDropshippingApp: React.FC<Props> = ({
   const [newTagInput, setNewTagInput] = useState<string>('');
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
 
+  const handleLiveCjSearch = async () => {
+    try {
+      const res = await fetch(`/api/cj/search?q=${encodeURIComponent(searchQuery)}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.products)) {
+        const mapped = data.products.map((p: any) => ({
+          id: p.supplierSku || p.id,
+          title: p.title,
+          category: p.category,
+          cjPrice: p.priceUsd,
+          suggestedRetail: Number((p.priceUsd * 2.2).toFixed(2)),
+          stock: p.stock,
+          shippingFeeUsd: p.shippingUsd,
+          deliveryTime: p.deliveryDays,
+          rating: p.productRating,
+          imported: false,
+          image: p.image,
+          images: p.images,
+          description: p.fullDescription
+        }));
+        setCjCatalog(mapped);
+      }
+    } catch (err) {
+      console.error('CJ Search error:', err);
+    }
+  };
+
+  useEffect(() => {
+    handleLiveCjSearch();
+  }, [searchQuery]);
+
   // 1-Click Direct Import
   const handleImportItem = (itemId: string) => {
     setCjCatalog((prev) =>
