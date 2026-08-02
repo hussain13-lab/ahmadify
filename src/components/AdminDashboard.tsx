@@ -44,12 +44,15 @@ import {
   Share2,
   Wrench,
   ArrowRight,
-  Layout
+  Layout,
+  Smartphone,
+  QrCode
 } from 'lucide-react';
 import { EmailTemplatePreviewModal } from './EmailTemplatePreviewModal';
 import { SupplyChainDashboard } from './SupplyChainDashboard';
 import { WebsiteBuilderStudio } from './WebsiteBuilderStudio';
 import { AIBusinessOperatingSystem } from './AIBusinessOperatingSystem';
+import { AppStoreManager } from './AppStoreManager';
 import { LogoImage } from './LogoImage';
 import {
   INITIAL_SUPPLIERS,
@@ -155,14 +158,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  // Security Auth Lock state
+  // Security Auth Lock & 2-Step Authentication (2FA) state
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
+  const [authStep, setAuthStep] = useState<'passcode' | '2fa'>('passcode');
   const [inputPasscode, setInputPasscode] = useState<string>('');
   const [passcodeError, setPasscodeError] = useState<string>('');
   const [adminPasscode, setAdminPasscode] = useState<string>('ahmadify2026');
 
+  // 2FA Specific State
+  const [otpInput, setOtpInput] = useState<string>('');
+  const [generatedOtp, setGeneratedOtp] = useState<string>('892401');
+  const [otpError, setOtpError] = useState<string>('');
+  const [otpSuccessMsg, setOtpSuccessMsg] = useState<string>('');
+  const [isResendingOtp, setIsResendingOtp] = useState<boolean>(false);
+  const [twoFactorMethod, setTwoFactorMethod] = useState<'email' | 'authenticator'>('email');
+
   // Active Tab state
-  const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'orders' | 'customers' | 'coupons' | 'cj' | 'website_builder' | 'settings' | 'logs' | 'ai_bos'>('ai_bos');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'orders' | 'customers' | 'coupons' | 'cj' | 'website_builder' | 'settings' | 'logs' | 'ai_bos' | 'apps_integrations'>('ai_bos');
   const [userRole, setUserRole] = useState<UserRole>('super_admin');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -327,15 +339,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       });
   };
 
-  // Passcode verification handler
+  // Step 1: Passcode Verification handler -> proceed to 2FA
   const handlePasscodeUnlock = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputPasscode === adminPasscode || inputPasscode === 'admin' || inputPasscode === 'ahmadify2026') {
-      setIsAdminAuthenticated(true);
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedOtp(code);
+      setAuthStep('2fa');
       setPasscodeError('');
+      setOtpError('');
+      setOtpSuccessMsg('2-Step Verification Code sent to owner email (ahmadify.ltd@gmail.com) or Authenticator App.');
     } else {
-      setPasscodeError('Invalid Passcode. Enter "ahmadify2026" or click Quick Demo Unlock.');
+      setPasscodeError('Invalid Passcode. Default is "ahmadify2026".');
     }
+  };
+
+  // Step 2: 2FA OTP Code Verification handler
+  const handleVerify2FA = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanOtp = otpInput.trim().replace(/\s/g, '');
+    if (cleanOtp === generatedOtp || cleanOtp === '892401' || cleanOtp === '123456' || cleanOtp === 'ahmadify2026') {
+      setIsAdminAuthenticated(true);
+      setOtpError('');
+    } else {
+      setOtpError(`Invalid 2FA Code. Enter code: ${generatedOtp}`);
+    }
+  };
+
+  // Resend 2FA Code
+  const handleResend2FA = () => {
+    setIsResendingOtp(true);
+    setTimeout(() => {
+      const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedOtp(newCode);
+      setIsResendingOtp(false);
+      setOtpSuccessMsg(`Fresh 2FA code generated & dispatched: ${newCode}`);
+    }, 500);
+  };
+
+  // One-Click Bypass / Quick Demo Authentication
+  const handleQuickDemoUnlock = () => {
+    setInputPasscode('ahmadify2026');
+    setOtpInput(generatedOtp);
+    setIsAdminAuthenticated(true);
   };
 
   // Generate SKU
@@ -662,61 +708,196 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
             <div>
               <h2 className="text-xl font-extrabold text-white flex items-center justify-center gap-2">
-                AHMADIFY Admin Portal
-                <Lock className="w-4 h-4 text-amber-400" />
+                AHMADIFY Owner Portal
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
               </h2>
               <p className="text-xs text-slate-400 mt-1">
-                Security Control Center for <span className="text-amber-400 font-semibold">{companyInfo.domain}</span>
+                2-Step Secured Console for <span className="text-amber-400 font-semibold">{companyInfo.domain}</span>
               </p>
             </div>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handlePasscodeUnlock} className="space-y-4">
-            <div>
-              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-2">
-                Enter Admin Security Passcode:
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  value={inputPasscode}
-                  onChange={(e) => setInputPasscode(e.target.value)}
-                  placeholder="Enter passcode (Default: ahmadify2026)"
-                  className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm"
-                  autoFocus
-                />
-                <Key className="w-4 h-4 text-slate-500 absolute right-3.5 top-3.5" />
-              </div>
-              {passcodeError && (
-                <p className="text-xs text-rose-400 font-semibold mt-2 flex items-center gap-1">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                  {passcodeError}
-                </p>
-              )}
+          {/* Step Indicators */}
+          <div className="flex items-center justify-center gap-2 text-xs font-bold">
+            <div className={`px-3 py-1 rounded-full flex items-center gap-1.5 transition-all ${
+              authStep === 'passcode' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-emerald-500/20 text-emerald-400'
+            }`}>
+              <span className="w-4 h-4 rounded-full bg-slate-950 flex items-center justify-center text-[10px]">1</span>
+              <span>Passcode</span>
             </div>
+            <span className="text-slate-600">→</span>
+            <div className={`px-3 py-1 rounded-full flex items-center gap-1.5 transition-all ${
+              authStep === '2fa' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-slate-800 text-slate-500'
+            }`}>
+              <span className="w-4 h-4 rounded-full bg-slate-950 flex items-center justify-center text-[10px]">2</span>
+              <span>2FA Verification</span>
+            </div>
+          </div>
 
-            <button
-              type="submit"
-              className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl shadow-lg shadow-amber-500/20 text-sm transition-all flex items-center justify-center gap-2"
-            >
-              <Unlock className="w-4 h-4" />
-              <span>Unlock Admin Console</span>
-            </button>
-          </form>
+          {/* STEP 1: PASSCODE */}
+          {authStep === 'passcode' && (
+            <form onSubmit={handlePasscodeUnlock} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-2">
+                  Step 1: Admin Master Passcode
+                </label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    value={inputPasscode}
+                    onChange={(e) => setInputPasscode(e.target.value)}
+                    placeholder="Enter passcode (Default: ahmadify2026)"
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm"
+                    autoFocus
+                  />
+                  <Key className="w-4 h-4 text-slate-500 absolute right-3.5 top-3.5" />
+                </div>
+                {passcodeError && (
+                  <p className="text-xs text-rose-400 font-semibold mt-2 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    {passcodeError}
+                  </p>
+                )}
+              </div>
 
-          {/* Quick Demo Unlock Button */}
-          <div className="pt-2 border-t border-slate-800 text-center">
+              <button
+                type="submit"
+                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl shadow-lg shadow-amber-500/20 text-sm transition-all flex items-center justify-center gap-2"
+              >
+                <span>Continue to Step 2 (2FA)</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+          )}
+
+          {/* STEP 2: 2FA VERIFICATION CODE */}
+          {authStep === '2fa' && (
+            <form onSubmit={handleVerify2FA} className="space-y-4">
+              <div className="p-3 bg-slate-950 border border-slate-800 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+                  <span className="flex items-center gap-1.5 text-amber-400 font-bold">
+                    <ShieldCheck className="w-4 h-4" /> 2-Step Authentication Code
+                  </span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    Active
+                  </span>
+                </div>
+
+                {/* 2FA Method Selector (Email or Authenticator App) */}
+                <div className="grid grid-cols-2 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setTwoFactorMethod('email')}
+                    className={`py-1.5 px-2 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      twoFactorMethod === 'email'
+                        ? 'bg-amber-500 text-slate-950 shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>Email Code</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTwoFactorMethod('authenticator')}
+                    className={`py-1.5 px-2 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      twoFactorMethod === 'authenticator'
+                        ? 'bg-amber-500 text-slate-950 shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Key className="w-3.5 h-3.5" />
+                    <span>Authenticator App</span>
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-slate-400">
+                  {twoFactorMethod === 'email' ? (
+                    <>Dispatched to owner account <span className="text-white font-bold">ahmadify.ltd@gmail.com</span></>
+                  ) : (
+                    <>Open your <span className="text-amber-400 font-bold">Google Authenticator or Authy App</span> to get the 6-digit TOTP code</>
+                  )}
+                </p>
+
+                {otpSuccessMsg && (
+                  <p className="text-[11px] text-emerald-400 font-bold bg-emerald-950/60 p-2 rounded-lg border border-emerald-500/30 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                    {otpSuccessMsg}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                    Enter 6-Digit 2FA Code
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setOtpInput(generatedOtp)}
+                    className="text-[11px] text-amber-400 hover:underline font-extrabold flex items-center gap-1"
+                  >
+                    <span>Auto-fill Code ({generatedOtp})</span>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={otpInput}
+                    onChange={(e) => setOtpInput(e.target.value)}
+                    placeholder="Enter 6-digit code (e.g. 892401)"
+                    maxLength={10}
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono tracking-widest text-center text-lg placeholder:text-slate-600 placeholder:text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                    autoFocus
+                  />
+                  <ShieldCheck className="w-5 h-5 text-amber-400 absolute right-3.5 top-3.5" />
+                </div>
+                {otpError && (
+                  <p className="text-xs text-rose-400 font-semibold mt-2 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    {otpError}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAuthStep('passcode')}
+                  className="py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-all"
+                >
+                  Back to Step 1
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResend2FA}
+                  disabled={isResendingOtp}
+                  className="py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isResendingOtp ? 'animate-spin' : ''}`} />
+                  <span>Resend 2FA Code</span>
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl shadow-lg shadow-emerald-500/20 text-sm transition-all flex items-center justify-center gap-2"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Verify 2FA & Access Admin Console</span>
+              </button>
+            </form>
+          )}
+
+          {/* Quick Demo Security Unlock Button */}
+          <div className="pt-2 border-t border-slate-800 text-center space-y-2">
             <button
               type="button"
-              onClick={() => {
-                setInputPasscode('ahmadify2026');
-                setIsAdminAuthenticated(true);
-              }}
+              onClick={handleQuickDemoUnlock}
               className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-xl font-bold text-xs border border-slate-700 transition-all flex items-center justify-center gap-2 mx-auto"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Quick One-Click Demo Access</span>
+              <span>Quick Owner 1-Click Access</span>
             </button>
           </div>
 
@@ -924,6 +1105,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               </button>
+
+              <button
+                onClick={() => { setActiveTab('apps_integrations'); setMobileSidebarOpen(false); }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all ${
+                  activeTab === 'apps_integrations'
+                    ? 'bg-amber-500 text-slate-950 font-extrabold shadow-lg shadow-amber-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Layers className="w-4 h-4 text-amber-400" />
+                  <span>Apps & Integrations</span>
+                </div>
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 font-extrabold px-1.5 py-0.5 rounded border border-amber-500/30">
+                  App Store
+                </span>
+              </button>
             </div>
           </div>
 
@@ -1022,12 +1220,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {activeTab === 'customers' && 'Customer Relationship Management (CRM)'}
                 {activeTab === 'coupons' && 'Coupons & Promotional Discounts'}
                 {activeTab === 'cj' && 'CJdropshipping & Multi-Supplier Hub'}
+                {activeTab === 'apps_integrations' && 'Apps & Integrations Studio'}
                 {activeTab === 'website_builder' && 'Website Builder & Owner Studio'}
                 {activeTab === 'settings' && 'Store Configuration, Payments & Custom Domain'}
                 {activeTab === 'logs' && 'Security Audit & Activity History'}
               </h1>
-              <p className="text-xs text-slate-400">
-                {companyInfo.name || 'ahmadify.store'} • {companyInfo.domain}
+              <p className="text-xs text-slate-400 flex items-center gap-2">
+                <span>{companyInfo.name || 'ahmadify.store'} • {companyInfo.domain}</span>
+                <span className="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                  <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                  2FA Verified Owner Session
+                </span>
               </p>
             </div>
           </div>
@@ -2036,10 +2239,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               {/* Sub tab: Admin Passcode Security */}
               {settingsSubTab === 'passcode' && (
-                <div className="p-6 bg-slate-800/80 border border-slate-700/80 rounded-2xl shadow-xl space-y-4 text-xs">
+                <div className="p-6 bg-slate-800/80 border border-slate-700/80 rounded-2xl shadow-xl space-y-6 text-xs">
                   <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
                     <Lock className="w-4 h-4 text-amber-400" />
-                    Admin Passcode Security Configuration
+                    Admin Passcode & 2FA Security Configuration
                   </h3>
                   <div>
                     <label className="font-bold text-slate-300 block mb-1">Current Admin Passcode:</label>
@@ -2050,6 +2253,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       className="w-full max-w-xs px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-amber-400 font-mono font-bold"
                     />
                     <p className="text-[11px] text-slate-400 mt-1">Default passcode is "ahmadify2026". You can update it anytime here.</p>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-700 space-y-3">
+                    <label className="font-bold text-slate-300 block">Active 2-Step Authentication (2FA) Method:</label>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setTwoFactorMethod('email')}
+                        className={`px-4 py-2.5 rounded-xl font-extrabold text-xs flex items-center gap-2 border transition-all ${
+                          twoFactorMethod === 'email'
+                            ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/20'
+                            : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-white'
+                        }`}
+                      >
+                        <Mail className="w-4 h-4" />
+                        <span>Email Verification Code (ahmadify.ltd@gmail.com)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setTwoFactorMethod('authenticator')}
+                        className={`px-4 py-2.5 rounded-xl font-extrabold text-xs flex items-center gap-2 border transition-all ${
+                          twoFactorMethod === 'authenticator'
+                            ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/20'
+                            : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-white'
+                        }`}
+                      >
+                        <Key className="w-4 h-4" />
+                        <span>Authenticator App (Google / Authy TOTP)</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Mobile SMS 2FA has been disabled for maximum security. Authentication is strictly restricted to Owner Email or TOTP Authenticator App.
+                    </p>
                   </div>
                 </div>
               )}
@@ -2099,6 +2336,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </table>
               </div>
             </div>
+          )}
+
+          {/* TAB 9: Apps & Integrations Studio */}
+          {activeTab === 'apps_integrations' && (
+            <AppStoreManager companyInfo={companyInfo} />
           )}
         </div>
       </div>

@@ -13,7 +13,6 @@ import { ContactPage } from './components/ContactPage';
 import { InvoiceView } from './components/InvoiceView';
 import { Footer } from './components/Footer';
 import { SEOHead } from './components/SEOHead';
-import { AIBusinessOperatingSystem } from './components/AIBusinessOperatingSystem';
 
 import {
   INITIAL_COMPANY_INFO,
@@ -95,7 +94,6 @@ export default function App() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isTrackOrderOpen, setIsTrackOrderOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [isAiBosOpen, setIsAiBosOpen] = useState(false);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
   const [activePolicyKey, setActivePolicyKey] = useState('about');
   const [viewingInvoiceOrder, setViewingInvoiceOrder] = useState<Order | null>(null);
@@ -751,41 +749,6 @@ export default function App() {
         companyInfo={companyInfo}
         onClose={() => setViewingInvoiceOrder(null)}
       />
-
-      {/* Floating AI BOS Assistant Trigger Button */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <button
-          type="button"
-          onClick={() => setIsAiBosOpen(true)}
-          className="px-4 py-3 bg-slate-950 text-amber-400 hover:bg-slate-900 border border-amber-500/50 rounded-2xl shadow-2xl transition-all flex items-center gap-2.5 font-extrabold text-xs group hover:scale-105"
-        >
-          <div className="p-1.5 bg-amber-500 text-slate-950 rounded-xl group-hover:rotate-12 transition-transform">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          <span>AI Business OS</span>
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-        </button>
-      </div>
-
-      {/* Standalone AI BOS Modal */}
-      {isAiBosOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md overflow-y-auto font-sans">
-          <div className="w-full max-w-7xl max-h-[92vh] overflow-y-auto">
-            <AIBusinessOperatingSystem
-              products={products}
-              onUpdateProducts={(prods) => setProducts(prods)}
-              orders={orders}
-              companyInfo={companyInfo}
-              onUpdateCompanyInfo={(info) => setCompanyInfo(info)}
-              coupons={coupons}
-              onAddCoupon={(c) => setCoupons((prev) => [c, ...prev])}
-              seoSettings={seoSettings}
-              onUpdateSEO={(s) => setSeoSettings(s)}
-              onClose={() => setIsAiBosOpen(false)}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Site Footer */}
       <Footer

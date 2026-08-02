@@ -416,12 +416,20 @@ export interface BlogPost {
 
 export type PageId =
   | 'home'
+  | 'header'
+  | 'footer'
   | 'header_footer'
   | 'navigation_menu'
   | 'mega_menu'
+  | 'all_pages'
   | 'hero_section'
   | 'featured_categories'
   | 'featured_products'
+  | 'category_page'
+  | 'collection_page'
+  | 'search_page'
+  | 'cart_page'
+  | 'wishlist_page'
   | 'trending'
   | 'bestsellers'
   | 'flash_sales'
@@ -429,19 +437,26 @@ export type PageId =
   | 'about_us'
   | 'contact'
   | 'faq'
+  | 'privacy_policy'
+  | 'terms_conditions'
+  | 'return_policy'
+  | 'shipping_policy'
   | 'policies'
   | 'blogs'
   | 'announcement_bar'
   | 'popup_banner'
   | 'landing_page'
   | 'page_404'
+  | 'maintenance_page'
   | 'product_detail'
   | 'checkout'
   | 'thank_you'
-  | 'customer_dashboard';
+  | 'customer_dashboard'
+  | string;
 
 export type BlockType =
   | 'hero'
+  | 'slider'
   | 'heading'
   | 'paragraph'
   | 'image'
@@ -451,11 +466,21 @@ export type BlockType =
   | 'category_carousel'
   | 'countdown_timer'
   | 'testimonial'
+  | 'reviews'
   | 'faq_accordion'
   | 'trust_badges'
+  | 'payment_icons'
   | 'newsletter_signup'
-  | 'custom_html'
   | 'contact_form'
+  | 'blog_feed'
+  | 'recently_viewed'
+  | 'recommended_products'
+  | 'maps'
+  | 'image_gallery'
+  | 'social_media'
+  | 'custom_html'
+  | 'custom_css'
+  | 'custom_js'
   | 'columns';
 
 export interface PageBlock {
@@ -471,6 +496,9 @@ export interface PageBlock {
   textColor?: string;
   visible: boolean;
   order: number;
+  scheduleStart?: string;
+  scheduleEnd?: string;
+  paddingY?: number;
   customCss?: string;
   customJs?: string;
   settings?: Record<string, any>;
@@ -485,6 +513,8 @@ export interface WebsitePageConfig {
   metaDescription: string;
   blocks: PageBlock[];
   updatedAt: string;
+  customHeaderHtml?: string;
+  customFooterHtml?: string;
 }
 
 export interface GlobalThemeConfig {
@@ -493,21 +523,56 @@ export interface GlobalThemeConfig {
   accentColor: string;
   backgroundColorLight: string;
   backgroundColorDark: string;
+  textColorLight?: string;
+  textColorDark?: string;
+  borderColor?: string;
   fontFamilyHeading: string;
   fontFamilyBody: string;
+  fontSizeBase?: number;
   buttonStyle: 'rounded-full' | 'rounded-xl' | 'rounded-md' | 'square';
+  buttonPaddingX?: number;
+  buttonPaddingY?: number;
   borderRadius: number; // in px
+  cardShadow?: 'none' | 'sm' | 'md' | 'lg' | '2xl';
   layoutWidth: 'contained' | 'fluid' | 'narrow';
   enableDarkMode: boolean;
+  activeMode?: 'light' | 'dark';
   logoUrl: string;
+  logoHeightPx?: number;
   faviconUrl: string;
   announcementText: string;
   announcementLink: string;
   showAnnouncement: boolean;
+  announcementBgColor?: string;
+  announcementTextColor?: string;
   whatsappNumber: string;
   supportPhone: string;
   supportEmail: string;
   addressText: string;
+  // Header Builder settings
+  showSearchBar?: boolean;
+  showCategoriesDropdown?: boolean;
+  showLanguageSelector?: boolean;
+  showCurrencySelector?: boolean;
+  showWishlistIcon?: boolean;
+  showCartIcon?: boolean;
+  showTrackOrderLink?: boolean;
+  showAccountLink?: boolean;
+  stickyHeader?: boolean;
+  // Footer Builder settings
+  footerColumnsCount?: number;
+  copyrightText?: string;
+  showPaymentIcons?: boolean;
+  showTrustBadgesFooter?: boolean;
+  showNewsletterFooter?: boolean;
+  // Custom Code Injection
+  customCssGlobal?: string;
+  customJsGlobal?: string;
+  googleAnalyticsId?: string;
+  facebookPixelId?: string;
+  tiktokPixelId?: string;
+  headerScriptsHtml?: string;
+  footerScriptsHtml?: string;
 }
 
 export interface MediaAsset {

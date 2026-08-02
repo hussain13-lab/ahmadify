@@ -13,21 +13,56 @@ export const DEFAULT_THEME_CONFIG: GlobalThemeConfig = {
   accentColor: '#10B981', // Emerald
   backgroundColorLight: '#F8FAFC',
   backgroundColorDark: '#0B0F17',
+  textColorLight: '#0F172A',
+  textColorDark: '#F8FAFC',
+  borderColor: '#334155',
   fontFamilyHeading: 'Playfair Display',
   fontFamilyBody: 'Plus Jakarta Sans',
+  fontSizeBase: 16,
   buttonStyle: 'rounded-xl',
+  buttonPaddingX: 20,
+  buttonPaddingY: 10,
   borderRadius: 12,
+  cardShadow: 'md',
   layoutWidth: 'contained',
   enableDarkMode: true,
+  activeMode: 'dark',
   logoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=120&q=80',
+  logoHeightPx: 40,
   faviconUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=32&q=80',
   announcementText: '✨ FREE UK Express Delivery on Orders Over £50 | Use Code "AHMADIFY15" for 15% Off',
   announcementLink: '/offers',
   showAnnouncement: true,
+  announcementBgColor: '#7C2D12',
+  announcementTextColor: '#FEF3C7',
   whatsappNumber: '+44 7000 889900',
   supportPhone: '+44 20 7946 0912',
   supportEmail: 'support@ahmadify.store',
-  addressText: 'Ahmadify Commerce Platform Ltd, 100 Mayfair High Street, London W1K 2AA, UK'
+  addressText: 'Ahmadify Commerce Platform Ltd, 100 Mayfair High Street, London W1K 2AA, UK',
+  // Header Builder defaults
+  showSearchBar: true,
+  showCategoriesDropdown: true,
+  showLanguageSelector: true,
+  showCurrencySelector: true,
+  showWishlistIcon: true,
+  showCartIcon: true,
+  showTrackOrderLink: true,
+  showAccountLink: true,
+  stickyHeader: true,
+  // Footer Builder defaults
+  footerColumnsCount: 4,
+  copyrightText: '© 2026 Ahmadify Commerce Platform Ltd. All Rights Reserved. Built for UK & Global Excellence.',
+  showPaymentIcons: true,
+  showTrustBadgesFooter: true,
+  showNewsletterFooter: true,
+  // Custom Code Injection
+  customCssGlobal: '/* Global Custom CSS rules injected by Owner Studio */\n.owner-badge { border-radius: 9999px; }',
+  customJsGlobal: '// Custom JavaScript snippet\nconsole.log("Ahmadify Owner Studio active.");',
+  googleAnalyticsId: 'G-AHMADIFY9921',
+  facebookPixelId: 'FB-PIXEL-882193',
+  tiktokPixelId: 'TT-PIXEL-102938',
+  headerScriptsHtml: '<!-- Header Tracking Scripts -->',
+  footerScriptsHtml: '<!-- Footer Analytics Scripts -->'
 };
 
 export const INITIAL_WEBSITE_PAGES: WebsitePageConfig[] = [
@@ -90,6 +125,166 @@ export const INITIAL_WEBSITE_PAGES: WebsitePageConfig[] = [
     ]
   },
   {
+    id: 'product_detail',
+    title: 'Product Details Page Template',
+    slug: '/product/:id',
+    isPublished: true,
+    metaTitle: 'Product Details | Ahmadify Commerce',
+    metaDescription: 'View comprehensive product specifications, high-resolution media, customer reviews, and shipping estimates.',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-pd-reviews',
+        type: 'reviews',
+        title: 'Verified Customer Reviews & Ratings',
+        content: '4.9/5 Average rating across 1,280+ verified purchases.',
+        visible: true,
+        order: 1
+      },
+      {
+        id: 'blk-pd-rec',
+        type: 'recommended_products',
+        title: 'Frequently Bought Together',
+        content: 'Complete your luxury setup with these curated pairings.',
+        visible: true,
+        order: 2
+      }
+    ]
+  },
+  {
+    id: 'category_page',
+    title: 'Category & Catalog Page',
+    slug: '/category/:slug',
+    isPublished: true,
+    metaTitle: 'Explore Categories | Ahmadify Store',
+    metaDescription: 'Browse electronics, fashion, home decor, and watch collections.',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-cat-grid',
+        type: 'category_carousel',
+        title: 'Browse All Product Categories',
+        content: 'Discover hand-curated collections with express delivery.',
+        visible: true,
+        order: 1
+      }
+    ]
+  },
+  {
+    id: 'collection_page',
+    title: 'Curated Collections Page',
+    slug: '/collections',
+    isPublished: true,
+    metaTitle: 'Curated Collections | Ahmadify Luxury',
+    metaDescription: 'Exclusive product lines and seasonal drops.',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-coll-grid',
+        type: 'product_grid',
+        title: 'Seasonal Curated Drop',
+        content: 'Limited run inventory sourced direct from prime manufacturers.',
+        visible: true,
+        order: 1
+      }
+    ]
+  },
+  {
+    id: 'cart_page',
+    title: 'Shopping Cart Page',
+    slug: '/cart',
+    isPublished: true,
+    metaTitle: 'Your Shopping Cart | Ahmadify',
+    metaDescription: 'Review selected items, apply promo vouchers, and calculate UK shipping.',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-cart-trust',
+        type: 'trust_badges',
+        title: '256-Bit SSL Encrypted Checkout Guarantee',
+        content: 'Your payment information is secured with bank-grade encryption.',
+        visible: true,
+        order: 1
+      }
+    ]
+  },
+  {
+    id: 'checkout',
+    title: 'Checkout & Payment Page',
+    slug: '/checkout',
+    isPublished: true,
+    metaTitle: 'Secure Express Checkout | Ahmadify',
+    metaDescription: 'Fast, frictionless checkout supporting Stripe, Klarna, PayPal, and Apple Pay.',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-chk-pay',
+        type: 'payment_icons',
+        title: 'Accepted Payment Methods',
+        content: 'Instant processing via Visa, MasterCard, Amex, PayPal, and Klarna Pay Later.',
+        visible: true,
+        order: 1
+      }
+    ]
+  },
+  {
+    id: 'customer_dashboard',
+    title: 'Customer Account & Orders',
+    slug: '/account',
+    isPublished: true,
+    metaTitle: 'My Account & Order Tracking | Ahmadify',
+    metaDescription: 'Track package dispatches, view invoices, manage addresses, and request returns.',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-acc-dash',
+        type: 'heading',
+        title: 'Welcome to Your VIP Member Portal',
+        content: 'Manage your active orders and personal saved addresses.',
+        visible: true,
+        order: 1
+      }
+    ]
+  },
+  {
+    id: 'wishlist_page',
+    title: 'Customer Wishlist',
+    slug: '/wishlist',
+    isPublished: true,
+    metaTitle: 'My Saved Wishlist | Ahmadify',
+    metaDescription: 'Your saved favorite items and price drop alerts.',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-wish-head',
+        type: 'heading',
+        title: 'Your Saved Favorites',
+        content: 'Save items now and complete purchase anytime.',
+        visible: true,
+        order: 1
+      }
+    ]
+  },
+  {
+    id: 'blogs',
+    title: 'Blog & Editorial Journal',
+    slug: '/blog',
+    isPublished: true,
+    metaTitle: 'Ahmadify Journal | Trends, Guides & Luxury Lifestyle',
+    metaDescription: 'Read expert buying guides, luxury watch maintenance tips, and smart home technology trends.',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-blog-feed',
+        type: 'blog_feed',
+        title: 'Latest Editorial Stories',
+        content: 'Insights into manufacturing excellence, styling, and technology.',
+        visible: true,
+        order: 1
+      }
+    ]
+  },
+  {
     id: 'about_us',
     title: 'About Us',
     slug: '/about',
@@ -133,6 +328,14 @@ export const INITIAL_WEBSITE_PAGES: WebsitePageConfig[] = [
         content: 'Our team responds to all inquiries within 2 hours.',
         visible: true,
         order: 1
+      },
+      {
+        id: 'blk-contact-map',
+        type: 'maps',
+        title: 'Headquarters & Logistics Centre',
+        content: '100 Mayfair High Street, London W1K 2AA, United Kingdom',
+        visible: true,
+        order: 2
       }
     ]
   },
@@ -156,6 +359,82 @@ export const INITIAL_WEBSITE_PAGES: WebsitePageConfig[] = [
     ]
   },
   {
+    id: 'privacy_policy',
+    title: 'Privacy Policy',
+    slug: '/privacy-policy',
+    isPublished: true,
+    metaTitle: 'Privacy Policy | Ahmadify Store',
+    metaDescription: 'How we protect your personal information in compliance with UK GDPR.',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-privacy-text',
+        type: 'paragraph',
+        title: 'UK GDPR Privacy Compliance Statement',
+        content: 'At Ahmadify Commerce, we process customer data strictly for order fulfillment, fraud prevention, and customer support with complete encryption.',
+        visible: true,
+        order: 1
+      }
+    ]
+  },
+  {
+    id: 'terms_conditions',
+    title: 'Terms & Conditions',
+    slug: '/terms',
+    isPublished: true,
+    metaTitle: 'Terms & Conditions of Service | Ahmadify',
+    metaDescription: 'Official terms governing purchases, warranties, and store policies.',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-terms-text',
+        type: 'paragraph',
+        title: 'Terms of Service Overview',
+        content: 'All sales are governed by UK Consumer Rights regulations and Ahmadify quality guarantee policies.',
+        visible: true,
+        order: 1
+      }
+    ]
+  },
+  {
+    id: 'return_policy',
+    title: '30-Day Return & Refund Policy',
+    slug: '/return-policy',
+    isPublished: true,
+    metaTitle: 'Return & Refund Policy | Ahmadify Guarantee',
+    metaDescription: 'Hassle-free 30-day returns with prepaid UK return labels.',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-ret-text',
+        type: 'paragraph',
+        title: '30-Day Money-Back Guarantee',
+        content: 'If you are not completely satisfied with your purchase, return it within 30 days for a full refund.',
+        visible: true,
+        order: 1
+      }
+    ]
+  },
+  {
+    id: 'shipping_policy',
+    title: 'Shipping & Delivery Policy',
+    slug: '/shipping-policy',
+    isPublished: true,
+    metaTitle: 'Shipping & Delivery Times | Ahmadify Express',
+    metaDescription: 'Fast 1-3 day UK delivery and insured international dispatch options.',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-ship-text',
+        type: 'paragraph',
+        title: 'Tracked Express Dispatch Standard',
+        content: 'Orders placed before 2:00 PM GMT are dispatched same-day via Royal Mail, DPD, or DHL Express.',
+        visible: true,
+        order: 1
+      }
+    ]
+  },
+  {
     id: 'landing_page',
     title: 'Exclusive VIP Sale Landing Page',
     slug: '/vip-sale',
@@ -172,6 +451,46 @@ export const INITIAL_WEBSITE_PAGES: WebsitePageConfig[] = [
         imageUrl: 'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?auto=format&fit=crop&w=1200&q=80',
         ctaText: 'Shop VIP Deals Now',
         ctaLink: '/products?category=Flash+Sales',
+        visible: true,
+        order: 1
+      }
+    ]
+  },
+  {
+    id: 'page_404',
+    title: '404 Page Not Found',
+    slug: '/404',
+    isPublished: true,
+    metaTitle: 'Page Not Found | Ahmadify Store',
+    metaDescription: 'The page you requested could not be found.',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-404-hero',
+        type: 'hero',
+        title: '404 - Oops! Page Not Found',
+        content: 'The page you are looking for might have been moved or renamed.',
+        ctaText: 'Return to Home',
+        ctaLink: '/',
+        visible: true,
+        order: 1
+      }
+    ]
+  },
+  {
+    id: 'maintenance_page',
+    title: 'Maintenance Mode Page',
+    slug: '/maintenance',
+    isPublished: false,
+    metaTitle: 'Store Maintenance | Ahmadify',
+    metaDescription: 'We are updating our store to serve you better. We will be back shortly!',
+    updatedAt: new Date().toISOString(),
+    blocks: [
+      {
+        id: 'blk-maint-hero',
+        type: 'hero',
+        title: 'Upgrading Store Infrastructure',
+        content: 'We are enhancing our catalog and adding new luxury dropshipping arrivals. Check back in 15 minutes!',
         visible: true,
         order: 1
       }

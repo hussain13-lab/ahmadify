@@ -36,7 +36,26 @@ import {
   Percent,
   Tag,
   Zap,
-  DollarSign
+  DollarSign,
+  Menu,
+  ChevronDown,
+  X,
+  RotateCcw,
+  RotateCw,
+  SlidersHorizontal,
+  Folder,
+  Sliders as SlidersIcon,
+  Maximize2,
+  CheckSquare,
+  Wrench,
+  ExternalLink,
+  Languages,
+  CreditCard,
+  Grid,
+  Send,
+  SlidersVertical,
+  Activity,
+  History
 } from 'lucide-react';
 import {
   WebsitePageConfig,
@@ -83,22 +102,50 @@ export const WebsiteBuilderStudio: React.FC<WebsiteBuilderStudioProps> = ({
 }) => {
   const [studioTab, setStudioTab] = useState<
     | 'page_builder'
-    | 'global_theme'
+    | 'header_footer'
+    | 'menu_builder'
+    | 'global_design'
+    | 'ai_editor'
     | 'media_library'
+    | 'seo_code'
     | 'email_editor'
-    | 'seo_marketing'
-    | 'cms_blogs'
-    | 'backups_security'
+    | 'cms_content'
+    | 'publishing'
   >('page_builder');
 
-  // Page Builder state
-  const [selectedPageId, setSelectedPageId] = useState<PageId>('home');
+  // Device view state
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>('blk-hero-1');
+
+  // Active page selector
+  const [selectedPageId, setSelectedPageId] = useState<PageId>('home');
+  const activePage = pages.find((p) => p.id === selectedPageId) || pages[0] || {
+    id: 'home',
+    title: 'Home Page',
+    slug: '/',
+    isPublished: true,
+    metaTitle: 'Home',
+    metaDescription: 'Home page',
+    blocks: [],
+    updatedAt: new Date().toISOString()
+  };
+
+  // Block Inspector selection
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(
+    activePage.blocks[0]?.id || null
+  );
+
+  // Undo / Redo history stacks
+  const [historyStack, setHistoryStack] = useState<WebsitePageConfig[][]>([]);
+  const [redoStack, setRedoStack] = useState<WebsitePageConfig[][]>([]);
+
+  // AI Editor Assistant State
+  const [aiPromptInput, setAiPromptInput] = useState('');
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [aiProposedDiff, setAiProposedDiff] = useState<string | null>(null);
 
   // Media Manager state
   const [mediaFolder, setMediaFolder] = useState<string>('All');
-  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [mediaSearchQuery, setMediaSearchQuery] = useState('');
   const [aiImagePrompt, setAiImagePrompt] = useState('');
   const [isGeneratingAiImage, setIsGeneratingAiImage] = useState(false);
 
@@ -106,14 +153,49 @@ export const WebsiteBuilderStudio: React.FC<WebsiteBuilderStudioProps> = ({
   const [selectedEmailId, setSelectedEmailId] = useState<string>('order_confirmation');
   const activeEmailTemplate = emailTemplates.find((t) => t.id === selectedEmailId) || emailTemplates[0];
 
-  // Backup state
+  // Backup & publishing state
   const [backupDescInput, setBackupDescInput] = useState('');
+  const [isDraftMode, setIsDraftMode] = useState(false);
 
-  // Active page object
-  const activePage = pages.find((p) => p.id === selectedPageId) || pages[0];
+  // Menu Builder state
+  const [activeMenuId, setActiveMenuId] = useState<'main_nav' | 'footer_links' | 'mega_menu_1' | 'mobile_drawer'>('main_nav');
+  const [menuItems, setMenuItems] = useState([
+    { id: 'm1', label: 'Home', url: '/', icon: 'Home', badge: '' },
+    { id: 'm2', label: 'All Products', url: '/products', icon: 'ShoppingBag', badge: 'HOT' },
+    { id: 'm3', label: 'Luxury Watches', url: '/category/watches', icon: 'Clock', badge: 'NEW' },
+    { id: 'm4', label: 'VIP Deals', url: '/vip-sale', icon: 'Tag', badge: '50% OFF' },
+    { id: 'm5', label: 'Blog & Journal', url: '/blog', icon: 'BookOpen', badge: '' },
+    { id: 'm6', label: 'Contact Us', url: '/contact', icon: 'Mail', badge: '' }
+  ]);
+  const [newMenuLabel, setNewMenuLabel] = useState('');
+  const [newMenuUrl, setNewMenuUrl] = useState('');
+  const [newMenuBadge, setNewMenuBadge] = useState('');
+
+  // Save current pages state to history before changes
+  const recordHistory = () => {
+    setHistoryStack((prev) => [...prev, pages]);
+    setRedoStack([]);
+  };
+
+  const handleUndo = () => {
+    if (historyStack.length === 0) return;
+    const previous = historyStack[historyStack.length - 1];
+    setRedoStack((prev) => [pages, ...prev]);
+    setHistoryStack((prev) => prev.slice(0, prev.length - 1));
+    onUpdatePages(previous);
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[0];
+    setHistoryStack((prev) => [...prev, pages]);
+    setRedoStack((prev) => prev.slice(1));
+    onUpdatePages(next);
+  };
 
   // Helper: update active page blocks
   const handleUpdateActivePageBlocks = (updatedBlocks: PageBlock[]) => {
+    recordHistory();
     const updatedPages = pages.map((p) => {
       if (p.id === activePage.id) {
         return { ...p, blocks: updatedBlocks, updatedAt: new Date().toISOString() };
@@ -133,25 +215,28 @@ export const WebsiteBuilderStudio: React.FC<WebsiteBuilderStudioProps> = ({
     blocks[index] = blocks[targetIndex];
     blocks[targetIndex] = temp;
 
-    // re-index order
     blocks.forEach((b, idx) => (b.order = idx + 1));
     handleUpdateActivePageBlocks(blocks);
   };
 
   // Add new block
   const handleAddBlock = (type: BlockType) => {
+    recordHistory();
     const newBlock: PageBlock = {
       id: 'blk-' + Date.now(),
       type,
-      title: `New ${type.replace('_', ' ').toUpperCase()} Section`,
-      content: 'Custom content block added via Ahmadify No-Code Website Builder.',
-      imageUrl: type === 'hero' ? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80' : undefined,
-      ctaText: type === 'hero' || type === 'button' ? 'Shop Collection' : undefined,
+      title: `New ${type.replace(/_/g, ' ').toUpperCase()} Section`,
+      content: 'Custom content block added via Ahmadify Website Owner Studio.',
+      imageUrl: ['hero', 'image', 'image_gallery', 'slider'].includes(type)
+        ? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80'
+        : undefined,
+      ctaText: ['hero', 'button', 'slider', 'countdown_timer'].includes(type) ? 'Explore Collection' : undefined,
       ctaLink: '/products',
       backgroundColor: '#0F172A',
       textColor: '#FFFFFF',
       visible: true,
-      order: activePage.blocks.length + 1
+      order: activePage.blocks.length + 1,
+      paddingY: 32
     };
     handleUpdateActivePageBlocks([...activePage.blocks, newBlock]);
     setSelectedBlockId(newBlock.id);
@@ -159,6 +244,7 @@ export const WebsiteBuilderStudio: React.FC<WebsiteBuilderStudioProps> = ({
 
   // Delete block
   const handleDeleteBlock = (id: string) => {
+    recordHistory();
     const updated = activePage.blocks.filter((b) => b.id !== id);
     handleUpdateActivePageBlocks(updated);
     if (selectedBlockId === id) setSelectedBlockId(null);
@@ -166,6 +252,7 @@ export const WebsiteBuilderStudio: React.FC<WebsiteBuilderStudioProps> = ({
 
   // Duplicate block
   const handleDuplicateBlock = (block: PageBlock) => {
+    recordHistory();
     const dup: PageBlock = {
       ...block,
       id: 'blk-' + Date.now(),
@@ -177,6 +264,7 @@ export const WebsiteBuilderStudio: React.FC<WebsiteBuilderStudioProps> = ({
 
   // Toggle visibility
   const handleToggleBlockVisibility = (id: string) => {
+    recordHistory();
     const updated = activePage.blocks.map((b) => {
       if (b.id === id) return { ...b, visible: !b.visible };
       return b;
@@ -191,6 +279,94 @@ export const WebsiteBuilderStudio: React.FC<WebsiteBuilderStudioProps> = ({
       return b;
     });
     handleUpdateActivePageBlocks(updated);
+  };
+
+  // Publish changes live
+  const handlePublishLive = () => {
+    const desc = `Live Publish Snapshot (${new Date().toLocaleTimeString()}) - Owner Studio`;
+    onCreateBackup(desc);
+    setIsDraftMode(false);
+    alert('🎉 Website published successfully! Automatic system backup point created.');
+  };
+
+  // AI Assistant Engine logic
+  const handleRunAiAssistant = () => {
+    if (!aiPromptInput.trim()) {
+      alert('Please enter a command for the AI Website Editor.');
+      return;
+    }
+    setIsAiProcessing(true);
+    setAiProposedDiff(null);
+
+    setTimeout(() => {
+      setIsAiProcessing(false);
+      const promptLower = aiPromptInput.toLowerCase();
+
+      if (promptLower.includes('modern') || promptLower.includes('dark') || promptLower.includes('gold')) {
+        onUpdateThemeConfig({
+          ...themeConfig,
+          primaryColor: '#F59E0B',
+          secondaryColor: '#0F172A',
+          backgroundColorDark: '#0B0F17',
+          buttonStyle: 'rounded-full',
+          borderRadius: 16
+        });
+        setAiProposedDiff('Applied dark gold luxury color palette, rounded-full pill buttons, and 16px corner radii.');
+      } else if (promptLower.includes('font') || promptLower.includes('increase')) {
+        onUpdateThemeConfig({
+          ...themeConfig,
+          fontSizeBase: 18,
+          fontFamilyHeading: 'Playfair Display'
+        });
+        setAiProposedDiff('Increased base font size to 18px and set heading typography to Playfair Display.');
+      } else if (promptLower.includes('footer')) {
+        onUpdateThemeConfig({
+          ...themeConfig,
+          footerColumnsCount: 4,
+          showPaymentIcons: true,
+          showTrustBadgesFooter: true
+        });
+        setAiProposedDiff('Configured footer to 4 balanced columns with payment icons and trust badges.');
+      } else {
+        // Add a new AI-generated section
+        handleAddBlock('hero');
+        setAiProposedDiff(`Added a custom AI-generated section block based on prompt: "${aiPromptInput}".`);
+      }
+
+      setAiPromptInput('');
+    }, 1200);
+  };
+
+  // Template Export/Import JSON
+  const handleExportPageTemplate = () => {
+    const jsonStr = JSON.stringify(activePage, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ahmadify_template_${activePage.id}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportPageTemplate = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedPage = JSON.parse(event.target?.result as string);
+        if (importedPage && importedPage.blocks) {
+          recordHistory();
+          const updatedPages = pages.map((p) => (p.id === activePage.id ? { ...importedPage, id: activePage.id } : p));
+          onUpdatePages(updatedPages);
+          alert('Template imported successfully!');
+        }
+      } catch (err) {
+        alert('Invalid JSON template file format.');
+      }
+    };
+    reader.readAsText(file);
   };
 
   // AI Image generation simulation
@@ -214,183 +390,272 @@ export const WebsiteBuilderStudio: React.FC<WebsiteBuilderStudioProps> = ({
       onAddMediaAsset(newAsset);
       setIsGeneratingAiImage(false);
       setAiImagePrompt('');
-      alert('AI Image successfully created and added to Media Library!');
-    }, 1500);
+      alert('AI Image created and added to Media Library!');
+    }, 1200);
   };
 
   const selectedBlock = activePage.blocks.find((b) => b.id === selectedBlockId);
 
+  // Filtered Media Assets
+  const filteredMediaAssets = mediaAssets.filter((asset) => {
+    const matchesFolder = mediaFolder === 'All' || asset.folder === mediaFolder;
+    const matchesQuery = asset.name.toLowerCase().includes(mediaSearchQuery.toLowerCase());
+    return matchesFolder && matchesQuery;
+  });
+
   return (
-    <div className="bg-slate-900 border border-amber-500/20 rounded-2xl p-6 text-slate-100 shadow-2xl">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6 mb-6">
+    <div className="bg-slate-900 border border-amber-500/20 rounded-3xl p-6 text-slate-100 shadow-2xl space-y-6">
+      {/* Top Header Bar */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400">
-            <Layout className="w-6 h-6" />
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-400 shrink-0">
+            <Layout className="w-7 h-7" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-              Website Owner Studio & Visual Builder
-              <span className="px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
-                100% No-Code Control
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full">
+                Website Owner Studio
               </span>
-            </h2>
-            <p className="text-slate-400 text-sm mt-0.5">
-              Customize pages, global design themes, drag-and-drop sections, media library, emails, SEO, and backups without source code edits.
+              <span className={`px-2.5 py-0.5 text-[10px] font-extrabold uppercase rounded-full border ${
+                isDraftMode
+                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+              }`}>
+                {isDraftMode ? '● Draft Editing Mode' : '✓ Live Sync Active'}
+              </span>
+            </div>
+            <h1 className="text-2xl font-black text-white mt-1 flex items-center gap-2">
+              Ahmadify Website Control Center
+            </h1>
+            <p className="text-xs text-slate-400">
+              Complete 100% no-code control over pages, header, footer, menus, design system, AI editor, media, SEO, and publishing.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Global Action Toolbar */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Device Frame Switcher */}
+          <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold">
+            <button
+              onClick={() => setPreviewDevice('desktop')}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition ${
+                previewDevice === 'desktop' ? 'bg-amber-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Monitor className="w-3.5 h-3.5" /> Desktop
+            </button>
+            <button
+              onClick={() => setPreviewDevice('tablet')}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition ${
+                previewDevice === 'tablet' ? 'bg-amber-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Tablet className="w-3.5 h-3.5" /> Tablet
+            </button>
+            <button
+              onClick={() => setPreviewDevice('mobile')}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition ${
+                previewDevice === 'mobile' ? 'bg-amber-500 text-slate-950 shadow-md font-black' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" /> Mobile
+            </button>
+          </div>
+
+          {/* Undo / Redo */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleUndo}
+              disabled={historyStack.length === 0}
+              className="p-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-200 rounded-xl border border-slate-700 transition"
+              title="Undo Last Action"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleRedo}
+              disabled={redoStack.length === 0}
+              className="p-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-200 rounded-xl border border-slate-700 transition"
+              title="Redo Action"
+            >
+              <RotateCw className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Publish Live */}
           <button
-            onClick={() => alert('All website design and layout changes are live and synchronized!')}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-500/10 flex items-center gap-1.5"
+            onClick={handlePublishLive}
+            className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition flex items-center gap-1.5"
           >
             <CheckCircle2 className="w-4 h-4" />
-            Publish Changes Live
+            Publish Website Live
           </button>
         </div>
       </div>
 
-      {/* Primary Studio Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 border-b border-slate-800 scrollbar-none">
+      {/* Main Studio Navigation Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800 scrollbar-none text-xs font-bold">
         {[
-          { id: 'page_builder', label: 'Drag & Drop Page Builder', icon: Layout },
-          { id: 'global_theme', label: 'Global Design & Colors', icon: Palette },
-          { id: 'media_library', label: 'Media Manager & AI Studio', icon: ImageIcon },
-          { id: 'email_editor', label: 'Email Template Customizer', icon: Mail },
-          { id: 'seo_marketing', label: 'SEO & Marketing Rules', icon: Search },
-          { id: 'cms_blogs', label: 'CMS Articles & Legal Pages', icon: FileText },
-          { id: 'backups_security', label: 'Backups & Audit Logs', icon: Shield }
+          { id: 'page_builder', label: 'Page & Section Builder', icon: Layout },
+          { id: 'header_footer', label: 'Header & Footer Builder', icon: Layers },
+          { id: 'menu_builder', label: 'Menu & Mega Menu', icon: Menu },
+          { id: 'global_design', label: 'Global Design System', icon: Palette },
+          { id: 'ai_editor', label: 'AI Website Copilot', icon: Sparkles },
+          { id: 'media_library', label: 'Media Library & AI Studio', icon: ImageIcon },
+          { id: 'seo_code', label: 'SEO & Tracking Code', icon: Search },
+          { id: 'email_editor', label: 'Email Templates', icon: Mail },
+          { id: 'cms_content', label: 'CMS Articles & Policies', icon: FileText },
+          { id: 'publishing', label: 'Publishing & Snapshots', icon: Shield }
         ].map((tab) => {
-          const Icon = tab.icon;
+          const IconComponent = tab.icon;
           const isActive = studioTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setStudioTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
+              className={`px-4 py-2.5 rounded-2xl transition-all flex items-center gap-2 shrink-0 ${
                 isActive
-                  ? 'bg-amber-500 text-slate-950 shadow-md'
-                  : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-amber-500 text-slate-950 font-black shadow-lg'
+                  : 'bg-slate-950 text-slate-300 hover:bg-slate-800 hover:text-white'
               }`}
             >
-              <Icon className="w-4 h-4" />
-              {tab.label}
+              <IconComponent className="w-4 h-4" />
+              <span>{tab.label}</span>
             </button>
           );
         })}
       </div>
 
+      {/* ========================================================================= */}
       {/* TAB 1: DRAG & DROP PAGE BUILDER */}
+      {/* ========================================================================= */}
       {studioTab === 'page_builder' && (
         <div className="space-y-6">
-          {/* Top Bar: Select Page & Device Preview */}
-          <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Page Selector & Toolbar Bar */}
+          <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3 w-full md:w-auto">
-              <label className="text-xs font-bold text-amber-300 whitespace-nowrap">Editing Page:</label>
+              <label className="text-xs font-bold text-amber-400 whitespace-nowrap">Editing Store Page:</label>
               <select
                 value={selectedPageId}
-                onChange={(e) => setSelectedPageId(e.target.value as PageId)}
-                className="bg-slate-900 border border-slate-700 rounded-lg py-1.5 px-3 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
+                onChange={(e) => {
+                  setSelectedPageId(e.target.value as PageId);
+                  const p = pages.find((pg) => pg.id === e.target.value);
+                  if (p && p.blocks[0]) setSelectedBlockId(p.blocks[0].id);
+                }}
+                className="bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white focus:outline-none focus:border-amber-500 font-extrabold flex-1 md:w-72"
               >
-                {pages.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title} ({p.slug})
-                  </option>
-                ))}
+                <optgroup label="Core Store Pages">
+                  <option value="home">Homepage (/)</option>
+                  <option value="product_detail">Product Details Template (/product/:id)</option>
+                  <option value="category_page">Category Catalog (/category/:slug)</option>
+                  <option value="collection_page">Curated Collections (/collections)</option>
+                  <option value="cart_page">Shopping Cart (/cart)</option>
+                  <option value="checkout">Checkout & Payment (/checkout)</option>
+                  <option value="customer_dashboard">Customer Account (/account)</option>
+                  <option value="wishlist_page">Customer Wishlist (/wishlist)</option>
+                </optgroup>
+                <optgroup label="Content & Informational Pages">
+                  <option value="about_us">About Us (/about)</option>
+                  <option value="contact">Contact Us (/contact)</option>
+                  <option value="faq">FAQ Page (/faq)</option>
+                  <option value="blogs">Blog & Journal (/blog)</option>
+                  <option value="landing_page">Exclusive VIP Landing Page (/vip-sale)</option>
+                </optgroup>
+                <optgroup label="Store Legal & System Pages">
+                  <option value="privacy_policy">Privacy Policy (/privacy-policy)</option>
+                  <option value="terms_conditions">Terms & Conditions (/terms)</option>
+                  <option value="return_policy">30-Day Return Policy (/return-policy)</option>
+                  <option value="shipping_policy">Shipping & Delivery Policy (/shipping-policy)</option>
+                  <option value="page_404">404 Error Page (/404)</option>
+                  <option value="maintenance_page">Maintenance Mode (/maintenance)</option>
+                </optgroup>
               </select>
             </div>
 
-            <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-lg border border-slate-800">
+            {/* Template Import/Export */}
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setPreviewDevice('desktop')}
-                className={`p-1.5 rounded text-xs flex items-center gap-1 ${
-                  previewDevice === 'desktop' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
-                }`}
+                onClick={handleExportPageTemplate}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-slate-700"
               >
-                <Monitor className="w-3.5 h-3.5" /> Desktop
+                <Download className="w-3.5 h-3.5" /> Export JSON
               </button>
-              <button
-                onClick={() => setPreviewDevice('tablet')}
-                className={`p-1.5 rounded text-xs flex items-center gap-1 ${
-                  previewDevice === 'tablet' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Tablet className="w-3.5 h-3.5" /> Tablet
-              </button>
-              <button
-                onClick={() => setPreviewDevice('mobile')}
-                className={`p-1.5 rounded text-xs flex items-center gap-1 ${
-                  previewDevice === 'mobile' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5" /> Mobile
-              </button>
+              <label className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-slate-700 cursor-pointer">
+                <Upload className="w-3.5 h-3.5 text-amber-400" /> Import JSON
+                <input type="file" accept=".json" onChange={handleImportPageTemplate} className="hidden" />
+              </label>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left: Section Blocks Navigator & Add Palette (3 cols) */}
-            <div className="lg:col-span-4 bg-slate-800/80 border border-slate-700 rounded-xl p-4 space-y-4">
+            {/* Left Col: Section Navigator & Add Palette (4 cols) */}
+            <div className="lg:col-span-4 bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-4">
               <div>
-                <h3 className="text-sm font-bold text-white mb-2 flex items-center justify-between">
-                  <span>Page Sections ({activePage.blocks.length})</span>
-                </h3>
-                <p className="text-[11px] text-slate-400 mb-3">Reorder, duplicate, hide, or edit section parameters.</p>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    <Layers className="w-4 h-4" /> Sections ({activePage.blocks.length})
+                  </h3>
+                  <span className="text-[10px] text-slate-400 font-mono">Reorder & Edit</span>
+                </div>
 
-                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-80 overflow-y-auto pr-1 scrollbar-none">
                   {activePage.blocks.map((block, idx) => {
                     const isSelected = selectedBlockId === block.id;
                     return (
                       <div
                         key={block.id}
                         onClick={() => setSelectedBlockId(block.id)}
-                        className={`p-3 rounded-lg border text-xs cursor-pointer transition flex items-center justify-between ${
+                        className={`p-3 rounded-xl border text-xs cursor-pointer transition flex items-center justify-between ${
                           isSelected
-                            ? 'bg-amber-500/10 border-amber-500 text-white'
-                            : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
+                            ? 'bg-amber-500/10 border-amber-500 text-white shadow-md ring-1 ring-amber-500'
+                            : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
                         }`}
                       >
                         <div className="flex items-center gap-2 overflow-hidden">
-                          <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-mono text-[10px]">
+                          <span className="w-5 h-5 rounded-full bg-slate-800 text-amber-400 flex items-center justify-center font-mono text-[10px] font-black shrink-0">
                             {idx + 1}
                           </span>
-                          <span className="font-semibold truncate">{block.title}</span>
+                          <span className="font-extrabold truncate">{block.title}</span>
                         </div>
 
-                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => handleMoveBlock(idx, 'up')}
                             disabled={idx === 0}
-                            className="p-1 hover:text-amber-400 text-slate-400 disabled:opacity-30"
+                            className="p-1 hover:text-amber-400 text-slate-400 disabled:opacity-20"
+                            title="Move Section Up"
                           >
-                            <MoveUp className="w-3 h-3" />
+                            <MoveUp className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleMoveBlock(idx, 'down')}
                             disabled={idx === activePage.blocks.length - 1}
-                            className="p-1 hover:text-amber-400 text-slate-400 disabled:opacity-30"
+                            className="p-1 hover:text-amber-400 text-slate-400 disabled:opacity-20"
+                            title="Move Section Down"
                           >
-                            <MoveDown className="w-3 h-3" />
+                            <MoveDown className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleToggleBlockVisibility(block.id)}
-                            className="p-1 hover:text-amber-400 text-slate-400"
+                            className="p-1 text-slate-400"
+                            title="Toggle Visibility"
                           >
-                            {block.visible ? <Eye className="w-3 h-3 text-emerald-400" /> : <EyeOff className="w-3 h-3 text-red-400" />}
+                            {block.visible ? <Eye className="w-3.5 h-3.5 text-emerald-400" /> : <EyeOff className="w-3.5 h-3.5 text-rose-400" />}
                           </button>
                           <button
                             onClick={() => handleDuplicateBlock(block)}
                             className="p-1 hover:text-amber-400 text-slate-400"
+                            title="Duplicate Section"
                           >
-                            <Copy className="w-3 h-3" />
+                            <Copy className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDeleteBlock(block.id)}
-                            className="p-1 hover:text-red-400 text-slate-400"
+                            className="p-1 hover:text-rose-400 text-slate-400"
+                            title="Delete Section"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
@@ -399,46 +664,53 @@ export const WebsiteBuilderStudio: React.FC<WebsiteBuilderStudioProps> = ({
                 </div>
               </div>
 
-              <div className="border-t border-slate-700/60 pt-4">
-                <h4 className="text-xs font-bold text-amber-300 mb-2">Add New Section Block</h4>
-                <div className="grid grid-cols-2 gap-2 text-[11px]">
+              {/* Add New Block Palette */}
+              <div className="border-t border-slate-800 pt-4">
+                <h4 className="text-xs font-black uppercase text-amber-400 mb-2 flex items-center gap-1">
+                  <Plus className="w-3.5 h-3.5" /> Add Reusable Section Block
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-[11px] font-bold">
                   {[
                     { type: 'hero', label: 'Hero Banner' },
-                    { type: 'heading', label: 'Heading' },
-                    { type: 'paragraph', label: 'Text Block' },
+                    { type: 'slider', label: 'Slider / Carousel' },
                     { type: 'product_grid', label: 'Product Grid' },
-                    { type: 'category_carousel', label: 'Category Slider' },
-                    { type: 'countdown_timer', label: 'Countdown' },
+                    { type: 'category_carousel', label: 'Categories' },
+                    { type: 'countdown_timer', label: 'Countdown Timer' },
                     { type: 'testimonial', label: 'Testimonials' },
+                    { type: 'reviews', label: 'Customer Reviews' },
                     { type: 'faq_accordion', label: 'FAQ Accordion' },
                     { type: 'trust_badges', label: 'Trust Badges' },
+                    { type: 'payment_icons', label: 'Payment Icons' },
                     { type: 'newsletter_signup', label: 'Newsletter' },
                     { type: 'contact_form', label: 'Contact Form' },
+                    { type: 'blog_feed', label: 'Blog Feed' },
+                    { type: 'maps', label: 'Google Maps' },
+                    { type: 'image_gallery', label: 'Image Gallery' },
                     { type: 'custom_html', label: 'Custom HTML/CSS' }
                   ].map((item) => (
                     <button
                       key={item.type}
                       onClick={() => handleAddBlock(item.type as BlockType)}
-                      className="p-2 bg-slate-900 hover:bg-amber-500/20 text-slate-200 border border-slate-700 hover:border-amber-500 rounded-lg transition text-left font-medium flex items-center gap-1.5"
+                      className="p-2 bg-slate-900 hover:bg-amber-500/20 text-slate-200 border border-slate-800 hover:border-amber-500 rounded-xl transition text-left font-bold flex items-center gap-1.5"
                     >
-                      <Plus className="w-3 h-3 text-amber-400" />
-                      {item.label}
+                      <Plus className="w-3 h-3 text-amber-400 shrink-0" />
+                      <span className="truncate">{item.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Middle: Live Visual Page Canvas Preview (5 cols) */}
-            <div className="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col items-center min-h-[500px]">
-              <div className="w-full flex items-center justify-between border-b border-slate-800 pb-2 mb-4 text-xs text-slate-400">
-                <span className="font-mono">Live Visual Canvas Preview</span>
-                <span className="text-amber-400 font-semibold">{previewDevice.toUpperCase()} VIEW</span>
+            {/* Middle Col: Live Responsive Canvas (5 cols) */}
+            <div className="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col items-center min-h-[550px]">
+              <div className="w-full flex items-center justify-between border-b border-slate-800 pb-2 mb-4 text-xs font-mono text-slate-400">
+                <span>Live Responsive Canvas</span>
+                <span className="text-amber-400 font-extrabold">{previewDevice.toUpperCase()} VIEW</span>
               </div>
 
               <div
-                className={`transition-all bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-4 w-full overflow-y-auto max-h-[600px] ${
-                  previewDevice === 'mobile' ? 'max-w-[340px]' : previewDevice === 'tablet' ? 'max-w-[550px]' : 'w-full'
+                className={`transition-all bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4 w-full overflow-y-auto max-h-[620px] ${
+                  previewDevice === 'mobile' ? 'max-w-[340px]' : previewDevice === 'tablet' ? 'max-w-[560px]' : 'w-full'
                 }`}
               >
                 {activePage.blocks
@@ -449,23 +721,28 @@ export const WebsiteBuilderStudio: React.FC<WebsiteBuilderStudioProps> = ({
                       onClick={() => setSelectedBlockId(block.id)}
                       className={`p-4 rounded-xl border transition cursor-pointer relative ${
                         selectedBlockId === block.id
-                          ? 'border-amber-500 bg-amber-500/5 ring-1 ring-amber-500'
-                          : 'border-slate-800 bg-slate-800/40 hover:border-slate-700'
+                          ? 'border-amber-500 bg-amber-500/10 ring-2 ring-amber-500 shadow-xl'
+                          : 'border-slate-800 bg-slate-800/50 hover:border-slate-700'
                       }`}
-                      style={{ backgroundColor: block.backgroundColor, color: block.textColor }}
+                      style={{
+                        backgroundColor: block.backgroundColor,
+                        color: block.textColor,
+                        paddingTop: `${block.paddingY || 24}px`,
+                        paddingBottom: `${block.paddingY || 24}px`
+                      }}
                     >
-                      <span className="absolute top-2 right-2 text-[9px] uppercase px-2 py-0.5 bg-slate-950/80 text-amber-300 rounded font-mono">
+                      <span className="absolute top-2 right-2 text-[9px] font-mono font-black uppercase px-2 py-0.5 bg-slate-950/80 text-amber-400 rounded-full border border-amber-500/30">
                         {block.type}
                       </span>
-                      <h4 className="font-bold text-sm mb-1">{block.title}</h4>
+                      <h4 className="font-black text-sm mb-1">{block.title}</h4>
                       <p className="text-xs opacity-90 line-clamp-3">{block.content}</p>
 
                       {block.imageUrl && (
-                        <img src={block.imageUrl} alt={block.title} className="w-full h-28 object-cover rounded-lg mt-3 border border-slate-700" />
+                        <img src={block.imageUrl} alt={block.title} className="w-full h-32 object-cover rounded-xl mt-3 border border-slate-700" />
                       )}
 
                       {block.ctaText && (
-                        <button className="mt-3 px-3 py-1.5 bg-amber-500 text-slate-950 font-bold rounded-lg text-xs">
+                        <button className="mt-3 px-4 py-2 bg-amber-500 text-slate-950 font-black rounded-xl text-xs shadow-md">
                           {block.ctaText}
                         </button>
                       )}
@@ -474,97 +751,110 @@ export const WebsiteBuilderStudio: React.FC<WebsiteBuilderStudioProps> = ({
               </div>
             </div>
 
-            {/* Right: Selected Block Property Inspector (4 cols) */}
-            <div className="lg:col-span-3 bg-slate-800/80 border border-slate-700 rounded-xl p-4">
-              <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2 border-b border-slate-700 pb-2">
-                <Sliders className="w-4 h-4 text-amber-400" /> Block Inspector
+            {/* Right Col: Section Property Inspector (3 cols) */}
+            <div className="lg:col-span-3 bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-4">
+              <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5 border-b border-slate-800 pb-2">
+                <Sliders className="w-4 h-4" /> Block Inspector
               </h3>
 
               {selectedBlock ? (
-                <div className="space-y-3 text-xs">
+                <div className="space-y-3 text-xs font-bold">
                   <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Section Title</label>
+                    <label className="block text-slate-300 mb-1">Section Title</label>
                     <input
                       type="text"
                       value={selectedBlock.title}
                       onChange={(e) => handleUpdateSelectedBlockProp('title', e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 text-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Content Text</label>
+                    <label className="block text-slate-300 mb-1">Content Text</label>
                     <textarea
                       rows={3}
                       value={selectedBlock.content}
                       onChange={(e) => handleUpdateSelectedBlockProp('content', e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 text-white"
                     />
                   </div>
 
                   {selectedBlock.imageUrl !== undefined && (
                     <div>
-                      <label className="block text-slate-300 mb-1 font-semibold">Image URL</label>
+                      <label className="block text-slate-300 mb-1">Image URL</label>
                       <input
                         type="text"
                         value={selectedBlock.imageUrl || ''}
                         onChange={(e) => handleUpdateSelectedBlockProp('imageUrl', e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white font-mono"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 text-white font-mono text-[11px]"
                       />
                     </div>
                   )}
 
                   {selectedBlock.ctaText !== undefined && (
                     <div>
-                      <label className="block text-slate-300 mb-1 font-semibold">Button CTA Text</label>
+                      <label className="block text-slate-300 mb-1">Button CTA Text</label>
                       <input
                         type="text"
                         value={selectedBlock.ctaText || ''}
                         onChange={(e) => handleUpdateSelectedBlockProp('ctaText', e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 text-white"
                       />
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Background Color</label>
+                    <label className="block text-slate-300 mb-1">Padding Y (px)</label>
+                    <input
+                      type="range"
+                      min={10}
+                      max={80}
+                      value={selectedBlock.paddingY || 32}
+                      onChange={(e) => handleUpdateSelectedBlockProp('paddingY', parseInt(e.target.value))}
+                      className="w-full accent-amber-500 cursor-pointer"
+                    />
+                    <span className="text-[10px] text-amber-400">{selectedBlock.paddingY || 32}px Vertical Padding</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1">Background Color</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
                         value={selectedBlock.backgroundColor || '#0F172A'}
                         onChange={(e) => handleUpdateSelectedBlockProp('backgroundColor', e.target.value)}
-                        className="w-8 h-8 rounded border-none cursor-pointer bg-transparent"
+                        className="w-8 h-8 rounded-lg cursor-pointer bg-transparent"
                       />
                       <input
                         type="text"
                         value={selectedBlock.backgroundColor || '#0F172A'}
                         onChange={(e) => handleUpdateSelectedBlockProp('backgroundColor', e.target.value)}
-                        className="flex-1 bg-slate-900 border border-slate-700 rounded p-1.5 text-white font-mono"
+                        className="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-2 text-white font-mono text-[11px]"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Text Color</label>
+                    <label className="block text-slate-300 mb-1">Text Color</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
                         value={selectedBlock.textColor || '#FFFFFF'}
                         onChange={(e) => handleUpdateSelectedBlockProp('textColor', e.target.value)}
-                        className="w-8 h-8 rounded border-none cursor-pointer bg-transparent"
+                        className="w-8 h-8 rounded-lg cursor-pointer bg-transparent"
                       />
                       <input
                         type="text"
                         value={selectedBlock.textColor || '#FFFFFF'}
                         onChange={(e) => handleUpdateSelectedBlockProp('textColor', e.target.value)}
-                        className="flex-1 bg-slate-900 border border-slate-700 rounded p-1.5 text-white font-mono"
+                        className="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-2 text-white font-mono text-[11px]"
                       />
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-10 text-slate-400 text-xs">
-                  Select a block from the left panel to edit its properties.
+                <div className="text-center py-12 text-slate-400 text-xs">
+                  Select a section from the canvas or section list to edit properties.
                 </div>
               )}
             </div>
@@ -572,189 +862,220 @@ export const WebsiteBuilderStudio: React.FC<WebsiteBuilderStudioProps> = ({
         </div>
       )}
 
-      {/* TAB 2: GLOBAL THEME & STYLING */}
-      {studioTab === 'global_theme' && (
-        <div className="space-y-6">
-          <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Palette className="w-5 h-5 text-amber-400" /> Global Theme, Palette & Branding Engine
-            </h3>
+      {/* ========================================================================= */}
+      {/* TAB 2: HEADER & FOOTER BUILDER */}
+      {/* ========================================================================= */}
+      {studioTab === 'header_footer' && (
+        <div className="space-y-6 text-xs font-bold">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Header Builder */}
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
+              <h3 className="text-sm font-black uppercase text-amber-400 flex items-center gap-2 border-b border-slate-800 pb-3">
+                <Layers className="w-4 h-4" /> Header & Announcement Builder
+              </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              {/* Colors */}
-              <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3">
-                <h4 className="font-bold text-amber-300 text-xs">Brand Colors</h4>
-
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">Primary Color</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={themeConfig.primaryColor}
-                      onChange={(e) => onUpdateThemeConfig({ ...themeConfig, primaryColor: e.target.value })}
-                      className="w-8 h-8 rounded cursor-pointer bg-transparent"
-                    />
-                    <span className="font-mono text-xs text-white">{themeConfig.primaryColor}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">Secondary Color</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={themeConfig.secondaryColor}
-                      onChange={(e) => onUpdateThemeConfig({ ...themeConfig, secondaryColor: e.target.value })}
-                      className="w-8 h-8 rounded cursor-pointer bg-transparent"
-                    />
-                    <span className="font-mono text-xs text-white">{themeConfig.secondaryColor}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">Accent Color</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={themeConfig.accentColor}
-                      onChange={(e) => onUpdateThemeConfig({ ...themeConfig, accentColor: e.target.value })}
-                      className="w-8 h-8 rounded cursor-pointer bg-transparent"
-                    />
-                    <span className="font-mono text-xs text-white">{themeConfig.accentColor}</span>
-                  </div>
-                </div>
+              <div>
+                <label className="block text-slate-300 mb-1">Store Logo Image URL</label>
+                <input
+                  type="text"
+                  value={themeConfig.logoUrl}
+                  onChange={(e) => onUpdateThemeConfig({ ...themeConfig, logoUrl: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white font-mono text-[11px]"
+                />
               </div>
 
-              {/* Typography */}
-              <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3">
-                <h4 className="font-bold text-amber-300 text-xs">Typography & Fonts</h4>
-
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">Heading Font</label>
-                  <select
-                    value={themeConfig.fontFamilyHeading}
-                    onChange={(e) => onUpdateThemeConfig({ ...themeConfig, fontFamilyHeading: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"
-                  >
-                    <option value="Playfair Display">Playfair Display (Serif Luxury)</option>
-                    <option value="Plus Jakarta Sans">Plus Jakarta Sans (Modern Clean)</option>
-                    <option value="Montserrat">Montserrat (Geometric Sans)</option>
-                    <option value="Cinzel">Cinzel (High Fashion)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">Body Font</label>
-                  <select
-                    value={themeConfig.fontFamilyBody}
-                    onChange={(e) => onUpdateThemeConfig({ ...themeConfig, fontFamilyBody: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"
-                  >
-                    <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
-                    <option value="Inter">Inter UI</option>
-                    <option value="Roboto">Roboto</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-slate-300 mb-1">Announcement Bar Text</label>
+                <input
+                  type="text"
+                  value={themeConfig.announcementText}
+                  onChange={(e) => onUpdateThemeConfig({ ...themeConfig, announcementText: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white"
+                />
               </div>
 
-              {/* Layout & Style */}
-              <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3">
-                <h4 className="font-bold text-amber-300 text-xs">Controls & Layout</h4>
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                {[
+                  { key: 'showAnnouncement', label: 'Announcement Bar' },
+                  { key: 'showSearchBar', label: 'Search Bar' },
+                  { key: 'showCategoriesDropdown', label: 'Categories Menu' },
+                  { key: 'showLanguageSelector', label: 'Language Selector' },
+                  { key: 'showCurrencySelector', label: 'Currency Switcher' },
+                  { key: 'showWishlistIcon', label: 'Wishlist Button' },
+                  { key: 'showCartIcon', label: 'Cart Drawer Icon' },
+                  { key: 'showTrackOrderLink', label: 'Track Order Link' },
+                  { key: 'showAccountLink', label: 'Account Portal' },
+                  { key: 'stickyHeader', label: 'Sticky Header Bar' }
+                ].map((item) => (
+                  <label key={item.key} className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between cursor-pointer">
+                    <span className="text-slate-200">{item.label}</span>
+                    <input
+                      type="checkbox"
+                      checked={Boolean((themeConfig as any)[item.key])}
+                      onChange={(e) => onUpdateThemeConfig({ ...themeConfig, [item.key]: e.target.checked })}
+                      className="accent-amber-500 w-4 h-4 cursor-pointer"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
 
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">Button Radius Style</label>
-                  <select
-                    value={themeConfig.buttonStyle}
-                    onChange={(e) => onUpdateThemeConfig({ ...themeConfig, buttonStyle: e.target.value as any })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"
-                  >
-                    <option value="rounded-full">Pill / Rounded Full</option>
-                    <option value="rounded-xl">Smooth Rounded XL</option>
-                    <option value="rounded-md">Standard Rounded MD</option>
-                    <option value="square">Sharp Square</option>
-                  </select>
-                </div>
+            {/* Footer Builder */}
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
+              <h3 className="text-sm font-black uppercase text-amber-400 flex items-center gap-2 border-b border-slate-800 pb-3">
+                <Layers className="w-4 h-4" /> Footer Layout & Policy Links
+              </h3>
 
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">Announcement Bar Text</label>
-                  <input
-                    type="text"
-                    value={themeConfig.announcementText}
-                    onChange={(e) => onUpdateThemeConfig({ ...themeConfig, announcementText: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"
-                  />
-                </div>
+              <div>
+                <label className="block text-slate-300 mb-1">Copyright Statement</label>
+                <input
+                  type="text"
+                  value={themeConfig.copyrightText || ''}
+                  onChange={(e) => onUpdateThemeConfig({ ...themeConfig, copyrightText: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1">Support Email Address</label>
+                <input
+                  type="text"
+                  value={themeConfig.supportEmail}
+                  onChange={(e) => onUpdateThemeConfig({ ...themeConfig, supportEmail: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                {[
+                  { key: 'showPaymentIcons', label: 'Payment Icons (Visa/PayPal)' },
+                  { key: 'showTrustBadgesFooter', label: 'Footer Trust Badges' },
+                  { key: 'showNewsletterFooter', label: 'Newsletter Signup' }
+                ].map((item) => (
+                  <label key={item.key} className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between cursor-pointer">
+                    <span className="text-slate-200">{item.label}</span>
+                    <input
+                      type="checkbox"
+                      checked={Boolean((themeConfig as any)[item.key])}
+                      onChange={(e) => onUpdateThemeConfig({ ...themeConfig, [item.key]: e.target.checked })}
+                      className="accent-amber-500 w-4 h-4 cursor-pointer"
+                    />
+                  </label>
+                ))}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 3: MEDIA LIBRARY & AI STUDIO */}
-      {studioTab === 'media_library' && (
-        <div className="space-y-6">
-          <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-amber-400" /> Media Asset Manager & AI Studio
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">Manage banners, product photography, logos, and AI-generated visuals.</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    const newAsset: MediaAsset = {
-                      id: 'med-' + Date.now(),
-                      name: 'uploaded_banner_' + Math.floor(Math.random() * 100) + '.jpg',
-                      url: 'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?auto=format&fit=crop&w=800&q=80',
-                      type: 'image',
-                      sizeBytes: 1200000,
-                      folder: 'Banners',
-                      createdAt: new Date().toISOString().substring(0, 10)
-                    };
-                    onAddMediaAsset(newAsset);
-                    alert('Uploaded image file successfully added to Media Library!');
-                  }}
-                  className="px-3.5 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-xl flex items-center gap-1.5"
-                >
-                  <Upload className="w-4 h-4" /> Bulk Upload File
-                </button>
-              </div>
+      {/* ========================================================================= */}
+      {/* TAB 3: MENU & MEGA MENU */}
+      {/* ========================================================================= */}
+      {studioTab === 'menu_builder' && (
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-6 text-xs font-bold">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div>
+              <h3 className="text-base font-black text-white flex items-center gap-2">
+                <Menu className="w-5 h-5 text-amber-400" /> Unlimited Navigation & Mega Menu Builder
+              </h3>
+              <p className="text-slate-400 text-xs mt-0.5">Manage links, dropdowns, icons, and mega menu columns without writing HTML.</p>
             </div>
 
-            {/* AI Image Studio Generator Box */}
-            <div className="p-4 bg-slate-900/90 border border-amber-500/30 rounded-xl mb-6">
-              <h4 className="text-xs font-bold text-amber-300 mb-2 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-amber-400" /> Gemini AI Image Generator
-              </h4>
-              <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              {(['main_nav', 'footer_links', 'mega_menu_1', 'mobile_drawer'] as const).map((mId) => (
+                <button
+                  key={mId}
+                  onClick={() => setActiveMenuId(mId)}
+                  className={`px-3 py-1.5 rounded-xl capitalize transition ${
+                    activeMenuId === mId ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-900 text-slate-300'
+                  }`}
+                >
+                  {mId.replace(/_/g, ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Left: Add Menu Item */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+              <h4 className="text-xs font-black uppercase text-amber-400">Add Menu Item</h4>
+              <div>
+                <label className="block text-slate-300 mb-1">Item Label</label>
                 <input
                   type="text"
-                  value={aiImagePrompt}
-                  onChange={(e) => setAiImagePrompt(e.target.value)}
-                  placeholder="e.g. Minimalist luxury smartwatch display on obsidian background..."
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                  value={newMenuLabel}
+                  onChange={(e) => setNewMenuLabel(e.target.value)}
+                  placeholder="e.g. Flash Deals"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white"
                 />
-                <button
-                  onClick={handleGenerateAiMedia}
-                  disabled={isGeneratingAiImage}
-                  className="py-2 px-4 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-1.5 transition disabled:opacity-50"
-                >
-                  {isGeneratingAiImage ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                  Generate Asset
-                </button>
               </div>
+              <div>
+                <label className="block text-slate-300 mb-1">Target Link URL</label>
+                <input
+                  type="text"
+                  value={newMenuUrl}
+                  onChange={(e) => setNewMenuUrl(e.target.value)}
+                  placeholder="e.g. /products?category=Deals"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white font-mono text-[11px]"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1">Badge Tag (Optional)</label>
+                <input
+                  type="text"
+                  value={newMenuBadge}
+                  onChange={(e) => setNewMenuBadge(e.target.value)}
+                  placeholder="e.g. HOT or 50% OFF"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  if (!newMenuLabel) return;
+                  setMenuItems([
+                    ...menuItems,
+                    {
+                      id: 'm-' + Date.now(),
+                      label: newMenuLabel,
+                      url: newMenuUrl || '/',
+                      icon: 'Tag',
+                      badge: newMenuBadge
+                    }
+                  ]);
+                  setNewMenuLabel('');
+                  setNewMenuUrl('');
+                  setNewMenuBadge('');
+                }}
+                className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs"
+              >
+                Add Menu Item
+              </button>
             </div>
 
-            {/* Media Assets Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {mediaAssets.map((asset) => (
-                <div key={asset.id} className="p-3 bg-slate-900 border border-slate-800 rounded-xl group relative">
-                  <img src={asset.url} alt={asset.name} className="w-full h-28 object-cover rounded-lg mb-2 border border-slate-800" />
-                  <span className="font-semibold text-white text-xs block truncate">{asset.name}</span>
-                  <span className="text-[10px] text-slate-400 block">{asset.folder} • {(asset.sizeBytes / 1024 / 1024).toFixed(2)} MB</span>
+            {/* Right: Active Menu List */}
+            <div className="md:col-span-2 space-y-2">
+              {menuItems.map((item, idx) => (
+                <div key={item.id} className="p-3 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-slate-800 text-amber-400 flex items-center justify-center font-mono text-[10px]">
+                      {idx + 1}
+                    </span>
+                    <span className="font-extrabold text-white">{item.label}</span>
+                    <span className="text-[11px] font-mono text-slate-400">({item.url})</span>
+                    {item.badge && (
+                      <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-black px-2 py-0.5 rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => setMenuItems(menuItems.filter((m) => m.id !== item.id))}
+                    className="p-1 text-slate-400 hover:text-rose-400"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
             </div>
@@ -762,201 +1083,432 @@ export const WebsiteBuilderStudio: React.FC<WebsiteBuilderStudioProps> = ({
         </div>
       )}
 
-      {/* TAB 4: EMAIL TEMPLATES */}
-      {studioTab === 'email_editor' && (
-        <div className="space-y-6">
-          <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Mail className="w-5 h-5 text-amber-400" /> Automated Email Templates & AI Copywriter
-            </h3>
+      {/* ========================================================================= */}
+      {/* TAB 4: GLOBAL DESIGN SYSTEM */}
+      {/* ========================================================================= */}
+      {studioTab === 'global_design' && (
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-6 text-xs font-bold">
+          <h3 className="text-base font-black text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+            <Palette className="w-5 h-5 text-amber-400" /> Global Design System & Styling Rules
+          </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                {emailTemplates.map((tmpl) => (
-                  <button
-                    key={tmpl.id}
-                    onClick={() => setSelectedEmailId(tmpl.id)}
-                    className={`w-full text-left p-3 rounded-lg border text-xs font-semibold transition ${
-                      selectedEmailId === tmpl.id
-                        ? 'bg-amber-500 text-slate-950 font-bold border-amber-500'
-                        : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
-                    }`}
-                  >
-                    {tmpl.name}
-                  </button>
-                ))}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Color Palette */}
+            <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
+              <h4 className="font-black text-amber-400 uppercase text-xs">Color Scheme</h4>
+              <div>
+                <label className="text-slate-300 block mb-1">Primary Color</label>
+                <input
+                  type="color"
+                  value={themeConfig.primaryColor}
+                  onChange={(e) => onUpdateThemeConfig({ ...themeConfig, primaryColor: e.target.value })}
+                  className="w-full h-9 rounded-xl cursor-pointer bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="text-slate-300 block mb-1">Secondary Color</label>
+                <input
+                  type="color"
+                  value={themeConfig.secondaryColor}
+                  onChange={(e) => onUpdateThemeConfig({ ...themeConfig, secondaryColor: e.target.value })}
+                  className="w-full h-9 rounded-xl cursor-pointer bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="text-slate-300 block mb-1">Accent Color</label>
+                <input
+                  type="color"
+                  value={themeConfig.accentColor}
+                  onChange={(e) => onUpdateThemeConfig({ ...themeConfig, accentColor: e.target.value })}
+                  className="w-full h-9 rounded-xl cursor-pointer bg-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Typography */}
+            <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
+              <h4 className="font-black text-amber-400 uppercase text-xs">Typography & Fonts</h4>
+              <div>
+                <label className="text-slate-300 block mb-1">Heading Font Family</label>
+                <select
+                  value={themeConfig.fontFamilyHeading}
+                  onChange={(e) => onUpdateThemeConfig({ ...themeConfig, fontFamilyHeading: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white"
+                >
+                  <option value="Playfair Display">Playfair Display (Serif Luxury)</option>
+                  <option value="Plus Jakarta Sans">Plus Jakarta Sans (Modern Clean)</option>
+                  <option value="Montserrat">Montserrat (Geometric Sans)</option>
+                  <option value="Cinzel">Cinzel (High Fashion)</option>
+                </select>
               </div>
 
-              {activeEmailTemplate && (
-                <div className="md:col-span-3 bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-4">
-                  <div>
-                    <label className="block text-xs text-slate-300 mb-1 font-semibold">Subject Line</label>
-                    <input
-                      type="text"
-                      value={activeEmailTemplate.subject}
-                      onChange={(e) => {
-                        const updated = emailTemplates.map((t) => (t.id === activeEmailTemplate.id ? { ...t, subject: e.target.value } : t));
-                        onUpdateEmailTemplates(updated);
-                      }}
-                      className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white"
-                    />
-                  </div>
+              <div>
+                <label className="text-slate-300 block mb-1">Base Font Size (px)</label>
+                <input
+                  type="range"
+                  min={12}
+                  max={20}
+                  value={themeConfig.fontSizeBase || 16}
+                  onChange={(e) => onUpdateThemeConfig({ ...themeConfig, fontSizeBase: parseInt(e.target.value) })}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+                <span className="text-amber-400 font-mono">{themeConfig.fontSizeBase || 16}px</span>
+              </div>
+            </div>
 
-                  <div>
-                    <label className="block text-xs text-slate-300 mb-1 font-semibold">HTML Template Body</label>
-                    <textarea
-                      rows={10}
-                      value={activeEmailTemplate.bodyHtml}
-                      onChange={(e) => {
-                        const updated = emailTemplates.map((t) => (t.id === activeEmailTemplate.id ? { ...t, bodyHtml: e.target.value } : t));
-                        onUpdateEmailTemplates(updated);
-                      }}
-                      className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-xs text-white font-mono"
-                    />
-                  </div>
-                </div>
-              )}
+            {/* Component Shapes & Presets */}
+            <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
+              <h4 className="font-black text-amber-400 uppercase text-xs">Buttons & Shapes</h4>
+              <div>
+                <label className="text-slate-300 block mb-1">Button Radius Style</label>
+                <select
+                  value={themeConfig.buttonStyle}
+                  onChange={(e) => onUpdateThemeConfig({ ...themeConfig, buttonStyle: e.target.value as any })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white"
+                >
+                  <option value="rounded-full">Pill / Rounded Full</option>
+                  <option value="rounded-xl">Smooth Rounded XL</option>
+                  <option value="rounded-md">Standard Rounded MD</option>
+                  <option value="square">Sharp Square</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-slate-300 block mb-1">Card Border Radius (px)</label>
+                <input
+                  type="range"
+                  min={0}
+                  max={24}
+                  value={themeConfig.borderRadius}
+                  onChange={(e) => onUpdateThemeConfig({ ...themeConfig, borderRadius: parseInt(e.target.value) })}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+                <span className="text-amber-400 font-mono">{themeConfig.borderRadius}px Radius</span>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 5: SEO & MARKETING */}
-      {studioTab === 'seo_marketing' && (
-        <div className="space-y-6">
-          <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Search className="w-5 h-5 text-amber-400" /> Search Engine Optimization & Global Meta Center
+      {/* ========================================================================= */}
+      {/* TAB 5: AI WEBSITE COPILOT */}
+      {/* ========================================================================= */}
+      {studioTab === 'ai_editor' && (
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-6 text-xs font-bold">
+          <div>
+            <h3 className="text-base font-black text-white flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-400" /> Natural Language AI Website Copilot
             </h3>
+            <p className="text-slate-400 text-xs mt-0.5">
+              Type natural language instructions to redesign pages, adjust global styles, or insert sale sections.
+            </p>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-3">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={aiPromptInput}
+                onChange={(e) => setAiPromptInput(e.target.value)}
+                placeholder='e.g. "Make the homepage dark modern with gold rounded buttons and a countdown timer"'
+                className="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3 text-white text-xs focus:outline-none focus:border-amber-500"
+              />
+              <button
+                onClick={handleRunAiAssistant}
+                disabled={isAiProcessing}
+                className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl shadow-md transition flex items-center gap-2 disabled:opacity-50"
+              >
+                <Sparkles className={`w-4 h-4 ${isAiProcessing ? 'animate-spin' : ''}`} />
+                <span>{isAiProcessing ? 'Applying Changes...' : 'Execute AI Edits'}</span>
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 pt-2">
+              {[
+                'Make homepage dark gold',
+                'Add Black Friday countdown banner',
+                'Change all buttons to rounded pills',
+                'Set footer to 4 columns',
+                'Increase font size to 18px'
+              ].map((promptText) => (
+                <button
+                  key={promptText}
+                  onClick={() => setAiPromptInput(promptText)}
+                  className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-lg text-[11px]"
+                >
+                  "{promptText}"
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {aiProposedDiff && (
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-300 space-y-1">
+              <div className="font-black flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> AI Command Successfully Applied Live!
+              </div>
+              <p className="text-xs">{aiProposedDiff}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 6: MEDIA LIBRARY */}
+      {/* ========================================================================= */}
+      {studioTab === 'media_library' && (
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-6 text-xs font-bold">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-black text-white flex items-center gap-2">
+                <ImageIcon className="w-5 h-5 text-amber-400" /> Media Asset Manager & AI Studio
+              </h3>
+              <p className="text-slate-400 text-xs mt-0.5">Manage photos, banners, logos, and generate custom visuals with AI.</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={mediaSearchQuery}
+                onChange={(e) => setMediaSearchQuery(e.target.value)}
+                placeholder="Search assets..."
+                className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs"
+              />
+            </div>
+          </div>
+
+          {/* AI Image Studio Generator Box */}
+          <div className="p-4 bg-slate-900 border border-amber-500/30 rounded-2xl space-y-2">
+            <h4 className="text-xs font-black uppercase text-amber-400 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-amber-400" /> Gemini AI Image Generator
+            </h4>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={aiImagePrompt}
+                onChange={(e) => setAiImagePrompt(e.target.value)}
+                placeholder="e.g. Minimalist luxury watch packaging on black marble with soft lighting..."
+                className="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white"
+              />
+              <button
+                onClick={handleGenerateAiMedia}
+                disabled={isGeneratingAiImage}
+                className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{isGeneratingAiImage ? 'Generating...' : 'Generate Visual'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Media Assets Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {filteredMediaAssets.map((asset) => (
+              <div key={asset.id} className="p-3 bg-slate-900 border border-slate-800 rounded-2xl group">
+                <img src={asset.url} alt={asset.name} className="w-full h-28 object-cover rounded-xl mb-2 border border-slate-800" />
+                <span className="font-extrabold text-white text-xs block truncate">{asset.name}</span>
+                <span className="text-[10px] text-slate-400 block">{asset.folder} • {(asset.sizeBytes / 1024 / 1024).toFixed(2)} MB</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 7: SEO & CODE INJECTIONS */}
+      {/* ========================================================================= */}
+      {studioTab === 'seo_code' && (
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-6 text-xs font-bold">
+          <h3 className="text-base font-black text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+            <Search className="w-5 h-5 text-amber-400" /> SEO Optimization & Code Injections
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <h4 className="text-xs font-black uppercase text-amber-400">SEO & Social Cards</h4>
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Global Site Title</label>
+                <label className="block text-slate-300 mb-1">Global Site Title</label>
                 <input
                   type="text"
                   value={seoConfig.siteTitle}
                   onChange={(e) => onUpdateSEOConfig({ ...seoConfig, siteTitle: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white"
                 />
               </div>
-
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Canonical URL</label>
-                <input
-                  type="text"
-                  value={seoConfig.canonicalUrl}
-                  onChange={(e) => onUpdateSEOConfig({ ...seoConfig, canonicalUrl: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white font-mono"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-slate-300 font-semibold mb-1">Meta Description</label>
+                <label className="block text-slate-300 mb-1">Meta Description</label>
                 <textarea
-                  rows={2}
+                  rows={3}
                   value={seoConfig.siteDescription}
                   onChange={(e) => onUpdateSEOConfig({ ...seoConfig, siteDescription: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white"
                 />
               </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-slate-300 font-semibold mb-1">Robots.txt Content</label>
-                <textarea
-                  rows={4}
-                  value={seoConfig.robotsTxt}
-                  onChange={(e) => onUpdateSEOConfig({ ...seoConfig, robotsTxt: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white font-mono"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 6: CMS & LEGAL PAGES */}
-      {studioTab === 'cms_blogs' && (
-        <div className="space-y-6">
-          <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-amber-400" /> Content Management System (CMS & Policies)
-            </h3>
-            <p className="text-xs text-slate-300 mb-4">
-              Edit Privacy Policy, Terms & Conditions, Return Policy, Shipping Policy, and Blog Articles directly.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-2">
-                <h4 className="font-bold text-amber-300">Privacy Policy Document</h4>
-                <textarea
-                  rows={5}
-                  defaultValue="Ahmadify Commerce Platform Ltd is committed to respecting your privacy and protecting your personal data across all multi-supplier transactions..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white"
-                />
-                <button className="px-3 py-1 bg-amber-500 text-slate-950 font-bold rounded text-xs">Save Document</button>
-              </div>
-
-              <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-2">
-                <h4 className="font-bold text-amber-300">Return & Refund Policy</h4>
-                <textarea
-                  rows={5}
-                  defaultValue="We offer a 30-day money-back guarantee on all verified items shipped through our UK Express supplier network..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white"
-                />
-                <button className="px-3 py-1 bg-amber-500 text-slate-950 font-bold rounded text-xs">Save Document</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 7: BACKUPS & SECURITY */}
-      {studioTab === 'backups_security' && (
-        <div className="space-y-6">
-          <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-amber-400" /> One-Click System Backups & Audit Logs
-            </h3>
-
-            <div className="flex gap-2 mb-6">
-              <input
-                type="text"
-                value={backupDescInput}
-                onChange={(e) => setBackupDescInput(e.target.value)}
-                placeholder="Backup note e.g. Pre-campaign full snapshot..."
-                className="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
-              />
-              <button
-                onClick={() => {
-                  onCreateBackup(backupDescInput || 'Manual System Backup');
-                  setBackupDescInput('');
-                  alert('System state backup point created successfully!');
-                }}
-                className="py-2 px-4 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-1.5 transition"
-              >
-                <Download className="w-4 h-4" /> Create System Backup
-              </button>
             </div>
 
             <div className="space-y-3">
-              {backups.map((bak) => (
-                <div key={bak.id} className="p-3 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-between text-xs">
-                  <div>
-                    <span className="font-bold text-amber-300">{bak.description}</span>
-                    <span className="text-slate-400 block text-[11px]">{bak.timestamp} • Created by {bak.creator} ({bak.sizeMb} MB)</span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      onRestoreBackup(bak.id);
-                      alert('System state restored to backup point!');
-                    }}
-                    className="px-3 py-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded text-xs"
-                  >
-                    Restore
-                  </button>
-                </div>
+              <h4 className="text-xs font-black uppercase text-amber-400">Tracking Pixels & Analytics</h4>
+              <div>
+                <label className="block text-slate-300 mb-1">Google Analytics Measurement ID</label>
+                <input
+                  type="text"
+                  value={themeConfig.googleAnalyticsId || ''}
+                  onChange={(e) => onUpdateThemeConfig({ ...themeConfig, googleAnalyticsId: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white font-mono text-[11px]"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1">Facebook Pixel ID</label>
+                <input
+                  type="text"
+                  value={themeConfig.facebookPixelId || ''}
+                  onChange={(e) => onUpdateThemeConfig({ ...themeConfig, facebookPixelId: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white font-mono text-[11px]"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 8: EMAIL TEMPLATES */}
+      {/* ========================================================================= */}
+      {studioTab === 'email_editor' && (
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-6 text-xs font-bold">
+          <h3 className="text-base font-black text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+            <Mail className="w-5 h-5 text-amber-400" /> Automated Store Email Templates
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="space-y-2">
+              {emailTemplates.map((tmpl) => (
+                <button
+                  key={tmpl.id}
+                  onClick={() => setSelectedEmailId(tmpl.id)}
+                  className={`w-full text-left p-3 rounded-xl border transition ${
+                    selectedEmailId === tmpl.id
+                      ? 'bg-amber-500 text-slate-950 font-black border-amber-500'
+                      : 'bg-slate-900 border-slate-800 text-slate-300'
+                  }`}
+                >
+                  {tmpl.name}
+                </button>
               ))}
             </div>
+
+            {activeEmailTemplate && (
+              <div className="md:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div>
+                  <label className="block text-slate-300 mb-1">Subject Line</label>
+                  <input
+                    type="text"
+                    value={activeEmailTemplate.subject}
+                    onChange={(e) => {
+                      const updated = emailTemplates.map((t) => (t.id === activeEmailTemplate.id ? { ...t, subject: e.target.value } : t));
+                      onUpdateEmailTemplates(updated);
+                    }}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1">HTML Template Body</label>
+                  <textarea
+                    rows={8}
+                    value={activeEmailTemplate.bodyHtml}
+                    onChange={(e) => {
+                      const updated = emailTemplates.map((t) => (t.id === activeEmailTemplate.id ? { ...t, bodyHtml: e.target.value } : t));
+                      onUpdateEmailTemplates(updated);
+                    }}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white font-mono text-[11px]"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 9: CMS & LEGAL POLICIES */}
+      {/* ========================================================================= */}
+      {studioTab === 'cms_content' && (
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-6 text-xs font-bold">
+          <h3 className="text-base font-black text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+            <FileText className="w-5 h-5 text-amber-400" /> CMS Articles & Store Legal Policies
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-2">
+              <h4 className="font-black text-amber-400">UK GDPR Privacy Policy Statement</h4>
+              <textarea
+                rows={5}
+                defaultValue="Ahmadify Commerce Platform Ltd processes user data strictly for order dispatch, fraud prevention, and customer care."
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white"
+              />
+              <button className="px-3 py-1.5 bg-amber-500 text-slate-950 font-black rounded-xl">Save Document</button>
+            </div>
+
+            <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-2">
+              <h4 className="font-black text-amber-400">30-Day Return Policy Statement</h4>
+              <textarea
+                rows={5}
+                defaultValue="Returns are accepted within 30 days of UK delivery with pre-paid return shipping vouchers."
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white"
+              />
+              <button className="px-3 py-1.5 bg-amber-500 text-slate-950 font-black rounded-xl">Save Document</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 10: PUBLISHING & SNAPSHOTS */}
+      {/* ========================================================================= */}
+      {studioTab === 'publishing' && (
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-6 text-xs font-bold">
+          <h3 className="text-base font-black text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+            <Shield className="w-5 h-5 text-amber-400" /> System Snapshots & One-Click Rollback
+          </h3>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={backupDescInput}
+              onChange={(e) => setBackupDescInput(e.target.value)}
+              placeholder="Backup label e.g. Pre-Black Friday campaign snapshot..."
+              className="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white text-xs"
+            />
+            <button
+              onClick={() => {
+                onCreateBackup(backupDescInput || 'Manual Owner Backup');
+                setBackupDescInput('');
+                alert('System snapshot backup point created!');
+              }}
+              className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5"
+            >
+              <Download className="w-4 h-4" /> Create Snapshot
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {backups.map((bak) => (
+              <div key={bak.id} className="p-3 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between">
+                <div>
+                  <span className="font-extrabold text-amber-300">{bak.description}</span>
+                  <span className="text-slate-400 block text-[11px]">{bak.timestamp} • By {bak.creator} ({bak.sizeMb} MB)</span>
+                </div>
+                <button
+                  onClick={() => {
+                    onRestoreBackup(bak.id);
+                    alert('System state restored to backup checkpoint!');
+                  }}
+                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs"
+                >
+                  Rollback to Snapshot
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
